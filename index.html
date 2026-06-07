@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سیستم مدیریت جلسات | نسخه کامل حرفه‌ای</title>
+    <title>سیستم مدیریت جلسات | نسخه حرفه‌ای</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -84,7 +84,6 @@
         }
         .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5,150,105,0.3); }
         .btn-danger { background: #ef4444; color: white; padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer; }
-        .btn-danger:hover { background: #dc2626; }
         .btn-secondary { background: #6b7280; color: white; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         
         /* کارت‌ها */
@@ -199,6 +198,9 @@
         .text-emerald { color: #059669; }
         .hidden { display: none; }
         
+        .chart-container { max-height: 220px; position: relative; }
+        canvas { max-height: 200px; width: 100% !important; }
+        
         @media (max-width: 768px) {
             .sidebar { width: 80px; }
             .sidebar-link span { display: none; }
@@ -274,7 +276,7 @@
         </div>
         <div class="stat-card">
             <h3 class="mb-2">📈 توزیع جلسات بر اساس نوع</h3>
-            <canvas id="typeChart" height="200"></canvas>
+            <div class="chart-container"><canvas id="typeChart" height="200"></canvas></div>
         </div>
     </div>
 
@@ -285,7 +287,7 @@
             <div class="flex">
                 <button onclick="openAddUserModal()" class="btn-primary">➕ افزودن پرسنل</button>
                 <label class="btn-primary" style="cursor: pointer;">📂 آپلود اکسل<input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelUpload(this)"></label>
-                <button onclick="exportUsersReport()" class="btn-primary">📥 خروجی JSON</button>
+                <button onclick="exportFullJSON()" class="btn-primary">📥 خروجی JSON</button>
                 <label class="btn-primary" style="cursor: pointer;">📤 وارد کردن JSON<input type="file" id="importJSON" accept=".json" class="hidden" onchange="importJSON(this)"></label>
             </div>
         </div>
@@ -303,13 +305,13 @@
             <input type="datetime-local" id="meetingDateTime" class="form-input">
             <input type="number" id="meetingDuration" placeholder="مدت زمان (دقیقه)" class="form-input">
             <select id="meetingType" class="form-input">
-                <option value="Individual">👤 انفرادی (Individual)</option>
-                <option value="Team">👥 تیمی (Team)</option>
-                <option value="Disciplinary">⚖️ تنبیهی (Disciplinary)</option>
+                <option value="Individual">👤 انفرادی</option>
+                <option value="Team">👥 تیمی</option>
+                <option value="Disciplinary">⚖️ تنبیهی</option>
                 <option value="CLF">📊 CLF</option>
-                <option value="Project Review">📁 بازبینی پروژه (Project Review)</option>
-                <option value="Strategic">🎯 استراتژیک (Strategic)</option>
-                <option value="One on One">🤝 یک به یک (One on One)</option>
+                <option value="Project Review">📁 بازبینی پروژه</option>
+                <option value="Strategic">🎯 استراتژیک</option>
+                <option value="One on One">🤝 یک به یک</option>
             </select>
             <textarea id="meetingMom" rows="3" placeholder="صورتجلسه (MOM)..." class="form-input"></textarea>
             <button onclick="addMeeting()" class="btn-primary w-full">💾 ذخیره جلسه</button>
@@ -323,7 +325,7 @@
         <div class="stat-card">
             <h2 class="text-xl font-bold mb-4">✅ افزودن وظیفه یا یادآوری</h2>
             <div class="flex flex-wrap">
-                <select id="itemType" class="form-input" onchange="toggleTaskFields()" style="flex:1;">
+                <select id="itemType" class="form-input" onchange="toggleTaskReminderFields()" style="flex:1;">
                     <option value="task">وظیفه (Task)</option>
                     <option value="reminder">یادآوری (Reminder)</option>
                 </select>
@@ -356,7 +358,7 @@
     <!-- ==================== گزارشات ==================== -->
     <div id="reports-tab" class="tab-content">
         <div class="stat-card">
-            <canvas id="reportChart" height="300"></canvas>
+            <div class="chart-container"><canvas id="reportChart" height="300"></canvas></div>
         </div>
         <div class="stat-card mt-4">
             <h3 class="font-bold mb-3">📤 خروجی گزارشات</h3>
@@ -408,53 +410,15 @@
     </div>
 </div>
 
+<div id="scheduleModal" class="modal">
+    <div class="modal-content">
+        <div id="scheduleModalBody"></div>
+    </div>
+</div>
+
 <script>
 // =====================================================
-// تنظیمات Supabase
-// =====================================================
-const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
-
-let supabase;
-if (typeof supabaseJs !== 'undefined') {
-    supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('✅ Supabase متصل شد');
-} else {
-    console.warn('⚠️ Supabase لود نشد، از داده‌های محلی استفاده می‌شود');
-    supabase = { from: () => ({ select: async () => ({ data: [], error: null }), upsert: async () => ({ error: null }) }) };
-}
-
-// =====================================================
-// داده‌های اصلی
-// =====================================================
-let users = [];
-let meetings = [];
-let tasks = [];
-let chart1 = null, chart2 = null;
-let currentEditUserId = null;
-
-// =====================================================
-// توابع کمکی
-// =====================================================
-function showToast(msg, type = "success") {
-    let toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-}
-
-function escapeHtml(s) {
-    if (!s) return '';
-    return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
-}
-
-function getInitial(name) {
-    return name ? name.charAt(0).toUpperCase() : "?";
-}
-
-// =====================================================
-// منوها (مستقل - همیشه کار می‌کند)
+// منوها - مستقل و همیشه کار می‌کند (مهمترین بخش)
 // =====================================================
 document.querySelectorAll('.sidebar-link').forEach(link => {
     link.addEventListener('click', function(e) {
@@ -471,56 +435,76 @@ document.querySelectorAll('.sidebar-link').forEach(link => {
         if (tabName === 'users') renderUsersList();
         if (tabName === 'meetings') renderUsersCards();
         if (tabName === 'tasks') renderTasksAndReminders();
+        if (tabName === 'dashboard' || tabName === 'reports') updateDashboardAndCharts();
     });
 });
 
+console.log('✅ منوها با موفقیت فعال شدند');
+
 // =====================================================
-// عملیات Supabase
+// داده‌های اصلی
 // =====================================================
-async function loadUsers() {
-    try {
-        let { data } = await supabase.from('users').select('*');
-        if (data && data.length > 0) users = data;
-        else if (users.length === 0) {
-            users = [
-                { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
-                { id: 2, username: "سارا محمدی", email: "sara@example.com" },
-                { id: 3, username: "رضا کریمی", email: "reza@example.com" }
-            ];
-        }
-        renderUsersList();
-        updateCounts();
-    } catch(e) { console.error(e); }
+let users = [];
+let meetings = [];
+let tasks = [];
+let chart1 = null, chart2 = null;
+let currentEditUserId = null;
+
+// =====================================================
+// توابع کمکی
+// =====================================================
+function showToast(message, type = "success") {
+    let toast = document.createElement("div");
+    toast.className = "toast";
+    toast.innerHTML = `<i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
 }
 
-async function loadMeetings() {
-    try {
-        let { data } = await supabase.from('meetings').select('*');
-        if (data) meetings = data;
-        renderUsersCards();
-        updateDashboardAndCharts();
-        updateCounts();
-    } catch(e) { console.error(e); }
+function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
 }
 
-async function loadTasks() {
-    try {
-        let { data } = await supabase.from('tasks').select('*');
-        if (data) tasks = data;
-        else if (tasks.length === 0) {
-            let today = new Date().toISOString().slice(0,10);
-            tasks = [
-                { id: 1, type: "task", title: "بررسی گزارش‌ها", date: today, time: "14:00", priority: "high", completed: false },
-                { id: 2, type: "reminder", title: "جلسه تیم", date: today, time: "09:30", description: "آماده کردن اسلایدها", completed: false }
-            ];
-        }
-        renderTasksAndReminders();
-    } catch(e) { console.error(e); }
+function getInitial(name) {
+    return name ? name.charAt(0).toUpperCase() : "?";
 }
 
-async function syncUsers() { for(let u of users) await supabase.from('users').upsert(u, {onConflict:'id'}); }
-async function syncMeetings() { for(let m of meetings) await supabase.from('meetings').upsert(m, {onConflict:'id'}); }
-async function syncTasks() { for(let t of tasks) await supabase.from('tasks').upsert(t, {onConflict:'id'}); }
+// =====================================================
+// بارگذاری داده‌ها از localStorage
+// =====================================================
+function loadData() {
+    let u = localStorage.getItem("mm_users");
+    let m = localStorage.getItem("mm_meetings");
+    let t = localStorage.getItem("mm_tasks");
+    if(u) users = JSON.parse(u);
+    if(m) meetings = JSON.parse(m);
+    if(t) tasks = JSON.parse(t);
+    
+    if(users.length === 0) {
+        users = [
+            { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
+            { id: 2, username: "سارا محمدی", email: "sara@example.com" },
+            { id: 3, username: "رضا کریمی", email: "reza@example.com" }
+        ];
+        saveUsers();
+    }
+    
+    if(tasks.length === 0) {
+        let today = new Date().toISOString().slice(0,10);
+        tasks = [
+            { id: 1, type: "task", title: "بررسی گزارش‌ها", date: today, time: "14:00", priority: "high", completed: false },
+            { id: 2, type: "reminder", title: "جلسه تیم", date: today, time: "09:30", description: "آماده کردن اسلایدها", completed: false }
+        ];
+        saveTasks();
+    }
+    
+    renderAll();
+}
+
+function saveUsers() { localStorage.setItem("mm_users", JSON.stringify(users)); }
+function saveMeetings() { localStorage.setItem("mm_meetings", JSON.stringify(meetings)); }
+function saveTasks() { localStorage.setItem("mm_tasks", JSON.stringify(tasks)); }
 
 // =====================================================
 // مدیریت پرسنل (CRUD)
@@ -534,14 +518,13 @@ function closeAddUserModal() {
     document.getElementById('addUserModal').style.display = 'none';
 }
 
-async function saveNewUser() {
+function saveNewUser() {
     let username = document.getElementById('newUsername').value.trim();
     if (!username) { showToast("لطفا نام را وارد کنید!"); return; }
     if (users.some(u => u.username === username)) { showToast("این نام قبلا ثبت شده است!"); return; }
     
-    let newUser = { id: Date.now(), username: username, email: "" };
-    users.push(newUser);
-    await syncUsers();
+    users.push({ id: Date.now(), username: username, email: "" });
+    saveUsers();
     closeAddUserModal();
     renderUsersList();
     renderUserSelect();
@@ -566,7 +549,7 @@ function openEditUserModal(userId) {
     document.getElementById('editUserModal').style.display = 'flex';
 }
 
-async function saveEditedUser() {
+function saveEditedUser() {
     let newUsername = document.getElementById('editUsername').value.trim();
     let newEmail = document.getElementById('editEmail').value.trim();
     
@@ -576,9 +559,9 @@ async function saveEditedUser() {
     if (userIndex !== -1) {
         users[userIndex].username = newUsername;
         users[userIndex].email = newEmail;
-        await syncUsers();
+        saveUsers();
         meetings.forEach(m => { if (m.userId === currentEditUserId) m.userName = newUsername; });
-        await syncMeetings();
+        saveMeetings();
         renderUsersList();
         renderUsersCards();
         renderUserSelect();
@@ -592,12 +575,12 @@ function closeEditUserModal() {
     currentEditUserId = null;
 }
 
-async function deleteUser(userId) {
+function deleteUser(userId) {
     if (!confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) return;
     users = users.filter(u => u.id !== userId);
     meetings = meetings.filter(m => m.userId !== userId);
-    await syncUsers();
-    await syncMeetings();
+    saveUsers();
+    saveMeetings();
     renderUsersList();
     renderUsersCards();
     renderUserSelect();
@@ -639,7 +622,7 @@ function renderUserSelect() {
 // =====================================================
 // مدیریت جلسات
 // =====================================================
-async function addMeeting() {
+function addMeeting() {
     let userId = document.getElementById('meetingUserSelect').value;
     if (!userId) { showToast("لطفا پرسنل را انتخاب کنید!"); return; }
     
@@ -665,7 +648,7 @@ async function addMeeting() {
         mom: mom
     });
     
-    await syncMeetings();
+    saveMeetings();
     document.getElementById('meetingDateTime').value = '';
     document.getElementById('meetingDuration').value = '';
     document.getElementById('meetingMom').value = '';
@@ -738,10 +721,10 @@ function closeModal() {
     document.getElementById('userModal').style.display = 'none';
 }
 
-async function deleteMeeting(meetingId) {
+function deleteMeeting(meetingId) {
     if (confirm("آیا از حذف این جلسه مطمئن هستید؟")) {
         meetings = meetings.filter(m => m.id !== meetingId);
-        await syncMeetings();
+        saveMeetings();
         renderUsersCards();
         updateDashboardAndCharts();
         updateCounts();
@@ -785,7 +768,7 @@ function toggleSelectAllUsers() {
     checks.forEach(c => c.checked = !allChecked);
 }
 
-async function saveGroupMeeting() {
+function saveGroupMeeting() {
     let checks = document.querySelectorAll('#groupMeetingModalBody .userCheck:checked');
     if (checks.length === 0) { showToast("لطفا حداقل یک نفر را انتخاب کنید!"); return; }
     
@@ -816,7 +799,7 @@ async function saveGroupMeeting() {
         }
     }
     
-    await syncMeetings();
+    saveMeetings();
     closeGroupMeetingModal();
     renderUsersCards();
     updateDashboardAndCharts();
@@ -831,13 +814,13 @@ function closeGroupMeetingModal() {
 // =====================================================
 // وظایف و یادآوری‌ها
 // =====================================================
-function toggleTaskFields() {
+function toggleTaskReminderFields() {
     let type = document.getElementById('itemType').value;
     document.getElementById('taskPriority').style.display = type === 'task' ? 'block' : 'none';
     document.getElementById('reminderDesc').style.display = type === 'reminder' ? 'block' : 'none';
 }
 
-async function addTaskOrReminder() {
+function addTaskOrReminder() {
     let type = document.getElementById('itemType').value;
     let title = document.getElementById('itemTitle').value.trim();
     let date = document.getElementById('itemDate').value;
@@ -853,7 +836,7 @@ async function addTaskOrReminder() {
         tasks.push({ id: Date.now(), type: 'reminder', title, date, time, description: desc, completed: false });
     }
     
-    await syncTasks();
+    saveTasks();
     renderTasksAndReminders();
     
     document.getElementById('itemTitle').value = '';
@@ -863,20 +846,20 @@ async function addTaskOrReminder() {
     showToast(`✅ ${type === 'task' ? 'وظیفه' : 'یادآوری'} اضافه شد`);
 }
 
-async function deleteTask(id) {
+function deleteTask(id) {
     if (confirm('آیا از حذف این آیتم مطمئن هستید؟')) {
         tasks = tasks.filter(t => t.id !== id);
-        await syncTasks();
+        saveTasks();
         renderTasksAndReminders();
         showToast('آیتم حذف شد');
     }
 }
 
-async function markTaskComplete(id) {
+function markTaskComplete(id) {
     let item = tasks.find(t => t.id === id);
     if (item) {
         item.completed = true;
-        await syncTasks();
+        saveTasks();
         renderTasksAndReminders();
         showToast(`✅ "${item.title}" انجام شد`);
     }
@@ -955,11 +938,11 @@ function updateDashboardAndCharts() {
 // =====================================================
 // اکسل و JSON
 // =====================================================
-async function handleExcelUpload(input) {
+function handleExcelUpload(input) {
     let file = input.files[0];
     if (!file) return;
     let reader = new FileReader();
-    reader.onload = async function(e) {
+    reader.onload = function(e) {
         let data = new Uint8Array(e.target.result);
         let workbook = XLSX.read(data, { type: 'array' });
         let sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -975,7 +958,7 @@ async function handleExcelUpload(input) {
                 added++;
             }
         }
-        if (added > 0) { await syncUsers(); renderUsersList(); renderUserSelect(); updateCounts(); showToast(`${added} کاربر جدید اضافه شد`); }
+        if (added > 0) { saveUsers(); renderUsersList(); renderUserSelect(); updateCounts(); showToast(`${added} کاربر جدید اضافه شد`); }
         else showToast("کاربر جدیدی یافت نشد", "error");
         input.value = '';
     };
@@ -1024,13 +1007,13 @@ function importJSON(input) {
     let file = input.files[0];
     if (!file) return;
     let reader = new FileReader();
-    reader.onload = async function(e) {
+    reader.onload = function(e) {
         try {
             let imported = JSON.parse(e.target.result);
             if (imported.users) users = imported.users;
             if (imported.meetings) meetings = imported.meetings;
             if (imported.tasks) tasks = imported.tasks;
-            await syncUsers(); await syncMeetings(); await syncTasks();
+            saveUsers(); saveMeetings(); saveTasks();
             renderAll();
             showToast("داده‌ها با موفقیت وارد شدند");
         } catch(err) { showToast("فایل JSON نامعتبر است!", "error"); }
@@ -1060,15 +1043,8 @@ function renderAll() {
 // =====================================================
 // شروع برنامه
 // =====================================================
-async function init() {
-    toggleTaskFields();
-    await loadUsers();
-    await loadMeetings();
-    await loadTasks();
-    renderAll();
-}
-
-init();
+loadData();
+toggleTaskReminderFields();
 </script>
 </body>
 </html>

@@ -12,259 +12,142 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { font-family: 'Poppins', sans-serif; }
-        
-        body { 
-            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
-            position: relative;
-        }
-        
-        .sidebar {
-            background: linear-gradient(180deg, #e6f7ec 0%, #d1fae5 100%);
-            border-right: 1px solid #a7f3d0;
-        }
-        
-        .sidebar-item-active {
-            background: linear-gradient(95deg, #10b981 0%, #059669 100%);
-            color: white !important;
-            border-right: 3px solid #047857;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-        }
-        
-        .sidebar-item-active i {
-            color: white !important;
-        }
-        
-        .sidebar-link { 
-            transition: all 0.2s ease; 
-            color: #065f46;
-            font-weight: 500;
-        }
-        
-        .sidebar-link i {
-            color: #059669;
-            transition: all 0.2s ease;
-        }
-        
-        .sidebar-link:hover { 
-            background: rgba(16, 185, 129, 0.15); 
-            color: #047857; 
-            transform: translateX(5px);
-        }
-        
-        .btn-gradient-primary { 
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            transition: all 0.2s;
-        }
-        
-        .btn-gradient-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px -5px rgba(5, 150, 105, 0.3);
-        }
-        
-        .btn-gradient-success { 
-            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
-            transition: all 0.2s;
-        }
-        
-        .btn-gradient-success:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px -5px rgba(2, 132, 199, 0.3);
-        }
-        
-        .stat-card { 
-            transition: all 0.2s; 
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-        
-        .stat-card:hover { 
-            transform: translateY(-3px); 
-            background: white; 
-            box-shadow: 0 15px 25px -8px rgba(0, 0, 0, 0.1);
-        }
-        
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
-        }
-        
+        body { background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%); position: relative; }
+        .sidebar { background: linear-gradient(180deg, #e6f7ec 0%, #d1fae5 100%); border-right: 1px solid #a7f3d0; }
+        .sidebar-item-active { background: linear-gradient(95deg, #10b981 0%, #059669 100%); color: white !important; border-right: 3px solid #047857; font-weight: 600; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); }
+        .sidebar-item-active i { color: white !important; }
+        .sidebar-link { transition: all 0.2s ease; color: #065f46; font-weight: 500; display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 12px; text-decoration: none; }
+        .sidebar-link i { color: #059669; width: 20px; }
+        .sidebar-link:hover { background: rgba(16, 185, 129, 0.15); color: #047857; transform: translateX(5px); }
+        .btn-gradient-primary { background: linear-gradient(135deg, #059669 0%, #10b981 100%); transition: all 0.2s; border: none; cursor: pointer; color: white; }
+        .btn-gradient-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -5px rgba(5, 150, 105, 0.3); }
+        .btn-gradient-success { background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); transition: all 0.2s; border: none; cursor: pointer; color: white; }
+        .btn-gradient-success:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -5px rgba(2, 132, 199, 0.3); }
+        .stat-card { transition: all 0.2s; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(5, 150, 105, 0.2); border-radius: 16px; padding: 20px; }
+        .stat-card:hover { transform: translateY(-3px); background: white; box-shadow: 0 15px 25px -8px rgba(0, 0, 0, 0.1); }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15); }
         .chart-container { max-height: 220px; position: relative; }
         canvas { max-height: 200px; width: 100% !important; }
-        
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-        .form-field {
-            flex: 1;
-            min-width: 140px;
-            font-size: 13px;
-            padding: 8px 12px;
-            border-radius: 10px;
-            border: 1px solid #bae6fd;
-            background: white;
-        }
-        
-        .users-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-        
-        .user-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-            border-radius: 20px;
-            padding: 18px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.06);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .user-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
-        }
-        
-        .user-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.12);
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 24px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
-            padding: 24px;
-            position: relative;
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-            color: white;
-            padding: 10px 18px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 1100;
-            box-shadow: 0 8px 20px -5px rgba(0,0,0,0.2);
-            animation: slideIn 0.25s ease, fadeOut 0.4s ease 2.5s forwards;
-            font-size: 13px;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-            to { opacity: 0; visibility: hidden; }
-        }
-        
-        .split-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .task-column {
-            background: #fefce8;
-            border-radius: 18px;
-            padding: 14px;
-            border: 1px solid #fde047;
-        }
-        .reminder-column {
-            background: #eff6ff;
-            border-radius: 18px;
-            padding: 14px;
-            border: 1px solid #93c5fd;
-        }
-        .task-item {
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-left: 3px solid #eab308;
-            transition: all 0.15s;
-        }
-        .reminder-item {
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-left: 3px solid #3b82f6;
-            transition: all 0.15s;
-        }
-        
-        .user-select-item {
-            transition: all 0.15s;
-        }
-        .user-select-item:hover {
-            background-color: #f0fdf4;
-            transform: translateX(3px);
-        }
-        
-        .group-checkbox {
-            width: 18px;
-            height: 18px;
-            border-radius: 5px;
-            border: 2px solid #cbd5e1;
-            cursor: pointer;
-        }
-        .group-checkbox:checked {
-            background-color: #10b981;
-            border-color: #10b981;
-        }
-        
-        .export-btn {
-            padding: 5px 10px;
-            font-size: 11px;
-            border-radius: 8px;
-            transition: all 0.15s;
-        }
-        
-        .photo-placeholder {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #10b981, #059669);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
+        .form-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .form-field { flex: 1; min-width: 140px; font-size: 13px; padding: 8px 12px; border-radius: 10px; border: 1px solid #bae6fd; background: white; }
+        .users-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .user-card { background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-radius: 20px; padding: 18px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.06); position: relative; overflow: hidden; border: 1px solid #e5e7eb; }
+        .user-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7); }
+        .user-card:hover { transform: translateY(-5px); box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.12); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 24px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 24px; position: relative; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: white; padding: 10px 18px; border-radius: 10px; display: flex; align-items: center; gap: 10px; z-index: 1100; box-shadow: 0 8px 20px -5px rgba(0,0,0,0.2); animation: slideIn 0.25s ease, fadeOut 0.4s ease 2.5s forwards; font-size: 13px; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+        .split-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .task-column { background: #fefce8; border-radius: 18px; padding: 14px; border: 1px solid #fde047; }
+        .reminder-column { background: #eff6ff; border-radius: 18px; padding: 14px; border: 1px solid #93c5fd; }
+        .task-item { background: white; border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 3px solid #eab308; transition: all 0.15s; }
+        .reminder-item { background: white; border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 3px solid #3b82f6; transition: all 0.15s; }
+        .user-select-item { transition: all 0.15s; }
+        .user-select-item:hover { background-color: #f0fdf4; transform: translateX(3px); }
+        .group-checkbox { width: 18px; height: 18px; border-radius: 5px; border: 2px solid #cbd5e1; cursor: pointer; }
+        .group-checkbox:checked { background-color: #10b981; border-color: #10b981; }
+        .export-btn { padding: 5px 10px; font-size: 11px; border-radius: 8px; transition: all 0.15s; cursor: pointer; }
+        .user-photo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: linear-gradient(135deg, #10b981, #059669); }
+        .photo-placeholder { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .gap-4 { gap: 16px; }
+        .p-4 { padding: 16px; }
+        .p-5 { padding: 20px; }
+        .p-6 { padding: 24px; }
+        .px-3 { padding-left: 12px; padding-right: 12px; }
+        .px-4 { padding-left: 16px; padding-right: 16px; }
+        .px-5 { padding-left: 20px; padding-right: 20px; }
+        .px-6 { padding-left: 24px; padding-right: 24px; }
+        .py-1 { padding-top: 4px; padding-bottom: 4px; }
+        .py-1\.5 { padding-top: 6px; padding-bottom: 6px; }
+        .py-2 { padding-top: 8px; padding-bottom: 8px; }
+        .py-3 { padding-top: 12px; padding-bottom: 12px; }
+        .py-4 { padding-top: 16px; padding-bottom: 16px; }
+        .py-6 { padding-top: 24px; padding-bottom: 24px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-3 { margin-bottom: 12px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-1 { margin-top: 4px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .mt-4 { margin-top: 16px; }
+        .mr-1 { margin-right: 4px; }
+        .mr-2 { margin-right: 8px; }
+        .ml-auto { margin-left: auto; }
+        .w-full { width: 100%; }
+        .w-5 { width: 20px; }
+        .w-6 { width: 24px; }
+        .w-8 { width: 32px; }
+        .w-9 { width: 36px; }
+        .w-14 { width: 56px; }
+        .w-60 { width: 240px; }
+        .w-72 { width: 288px; }
+        .h-5 { height: 20px; }
+        .h-6 { height: 24px; }
+        .h-8 { height: 32px; }
+        .h-9 { height: 36px; }
+        .h-14 { height: 56px; }
+        .h-screen { height: 100vh; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; }
+        .rounded { border-radius: 4px; }
+        .rounded-lg { border-radius: 8px; }
+        .rounded-xl { border-radius: 12px; }
+        .rounded-full { border-radius: 9999px; }
+        .border { border-width: 1px; }
+        .border-t { border-top-width: 1px; }
+        .border-b { border-bottom-width: 1px; }
+        .border-gray-100 { border-color: #f3f4f6; }
+        .border-gray-200 { border-color: #e5e7eb; }
+        .border-gray-300 { border-color: #d1d5db; }
+        .border-emerald-200 { border-color: #a7f3d0; }
+        .bg-white { background-color: white; }
+        .bg-white\/90 { background-color: rgba(255,255,255,0.9); }
+        .bg-white\/95 { background-color: rgba(255,255,255,0.95); }
+        .bg-gray-50 { background-color: #f9fafb; }
+        .bg-gray-100 { background-color: #f3f4f6; }
+        .bg-gray-200 { background-color: #e5e7eb; }
+        .bg-blue-500 { background-color: #3b82f6; }
+        .bg-emerald-50 { background-color: #ecfdf5; }
+        .bg-emerald-100 { background-color: #d1fae5; }
+        .bg-yellow-100 { background-color: #fef3c7; }
+        .bg-red-50 { background-color: #fef2f2; }
+        .text-white { color: white; }
+        .text-gray-400 { color: #9ca3af; }
+        .text-gray-500 { color: #6b7280; }
+        .text-gray-600 { color: #4b5563; }
+        .text-gray-700 { color: #374151; }
+        .text-gray-800 { color: #1f2937; }
+        .text-emerald-600 { color: #059669; }
+        .text-emerald-700 { color: #047857; }
+        .text-emerald-800 { color: #065f46; }
+        .text-red-500 { color: #ef4444; }
+        .text-blue-600 { color: #2563eb; }
+        .text-xs { font-size: 0.75rem; line-height: 1rem; }
+        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .font-medium { font-weight: 500; }
+        .font-bold { font-weight: 700; }
+        .font-semibold { font-weight: 600; }
+        .shadow-md { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .cursor-pointer { cursor: pointer; }
+        .hidden { display: none; }
+        .grid { display: grid; }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .object-cover { object-fit: cover; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
     </style>
 </head>
 <body>
@@ -584,7 +467,7 @@
 </div>
 
 <script>
-// جلوگیری از خطای تکرار declaration
+// ========== محافظت در برابر اجرای دوباره ==========
 if (typeof window._appInitialized === 'undefined') {
     window._appInitialized = true;
 
@@ -593,7 +476,11 @@ if (typeof window._appInitialized === 'undefined') {
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
     // =====================================
     
-    const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // جلوگیری از خطای تکرار declaration
+    if (typeof window._supabaseClient === 'undefined') {
+        window._supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    const supabase = window._supabaseClient;
     
     let users = [];
     let meetings = [];
@@ -615,6 +502,12 @@ if (typeof window._appInitialized === 'undefined') {
         renderTimeout = setTimeout(() => {
             renderAll();
         }, 50);
+    }
+
+    function getPhotoUrl(username) {
+        if(!username) return null;
+        let fileName = username.replace(/\s/g, '').toLowerCase();
+        return `assets/images/${fileName}.png`;
     }
 
     function getInitial(name) {
@@ -668,92 +561,10 @@ if (typeof window._appInitialized === 'undefined') {
             await supabase.from('tasks').upsert(t,{onConflict:'id'});
         }
     }
-
-    // ==================== CRUD FUNCTIONS ====================
-    async function saveNewUser() {
-        let username = document.getElementById("newUsername").value.trim();
-        if(!username) { showToast("Username required!", "error"); return; }
-        if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
-        if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
-        users.push({ id: Date.now(), username: username, email: "" });
-        await syncUsers();
-        closeAddUserModal();
-        debounceRender();
-        showToast(`User "${username}" added`);
-    }
-
-    async function deleteUser(userId) {
-        if(confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) {
-            users = users.filter(u => u.id !== userId);
-            meetings = meetings.filter(m => m.userId !== userId);
-            await syncUsers();
-            await syncMeetings();
-            debounceRender();
-            showToast("کاربر حذف شد");
-        }
-    }
-
-    async function addMeeting() {
-        let userId = document.getElementById("meetingUserSelect").value;
-        if(!userId) { showToast("Select a user!", "error"); return; }
-        let dateTime = document.getElementById("meetingDateTime").value;
-        let duration = document.getElementById("meetingDuration").value;
-        let type = document.getElementById("meetingType").value;
-        let mom = document.getElementById("meetingMom").value.trim() || "No MOM";
-        if(!dateTime || !duration) { showToast("Fill all fields!", "error"); return; }
-        let [date, time] = dateTime.split('T');
-        let timeFormatted = time.substring(0, 5);
-        let user = users.find(u => u.id == userId);
-        if(!user) return;
-        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
-        await syncMeetings();
-        document.getElementById("meetingDateTime").value = "";
-        document.getElementById("meetingDuration").value = "";
-        document.getElementById("meetingMom").value = "";
-        debounceRender();
-        showToast(`Meeting scheduled for ${user.username}`);
-    }
-
-    async function addTaskOrReminder() {
-        let type = document.getElementById("itemType").value;
-        let title = document.getElementById("itemTitle").value.trim();
-        let date = document.getElementById("itemDate").value;
-        let time = document.getElementById("itemTime").value;
-        if(!title || !date || !time) { showToast("Fill all fields!", "error"); return; }
-        if(type === "task") {
-            let priority = document.getElementById("taskPriority").value;
-            tasks.push({ id: Date.now(), type: "task", title, date, time, priority, completed: false });
-        } else {
-            let description = document.getElementById("reminderDesc").value.trim() || "No description";
-            tasks.push({ id: Date.now(), type: "reminder", title, date, time, description, completed: false });
-        }
-        await syncTasks();
-        renderTasksAndReminders();
-        document.getElementById("itemTitle").value = "";
-        document.getElementById("itemDate").value = "";
-        document.getElementById("itemTime").value = "";
-        document.getElementById("reminderDesc").value = "";
-        showToast(`${type === "task" ? "Task" : "Reminder"} added`);
-    }
-
-    async function deleteTask(id) {
-        if(confirm("Delete?")) {
-            tasks = tasks.filter(t => t.id !== id);
-            await syncTasks();
-            renderTasksAndReminders();
-            showToast("Deleted");
-        }
-    }
-
-    async function markTaskComplete(id) {
-        let item = tasks.find(t => t.id === id);
-        if(item) {
-            item.completed = true;
-            await syncTasks();
-            renderTasksAndReminders();
-            showToast(`"${item.title}" completed`);
-        }
-    }
+    
+    async function saveUsers(){ await syncUsers(); }
+    async function saveMeetings(){ await syncMeetings(); }
+    async function saveTasks(){ await syncTasks(); }
 
     // ==================== GROUP MEETING ====================
     function openGroupMeetingModal() {
@@ -880,7 +691,19 @@ if (typeof window._appInitialized === 'undefined') {
         if(event.target === document.getElementById("groupMeetingModal")) closeGroupMeetingModal();
     }
 
-    // ==================== RENDER FUNCTIONS ====================
+    async function loadData() {
+        await loadAllData();
+    }
+
+    function renderAll() { 
+        renderUserSelect(); 
+        renderUsersCards();
+        renderUsersList();
+        renderTasksAndReminders();
+        updateDashboardAndCharts(); 
+        updateUserCounts();
+    }
+
     function renderUsersList() {
         let container = document.getElementById("usersListContainer");
         if(!container) return;
@@ -917,7 +740,7 @@ if (typeof window._appInitialized === 'undefined') {
         }
         container.innerHTML = html;
     }
-
+    
     function openEditUserModal(userId) {
         let user = users.find(u => u.id === userId);
         if(!user) return;
@@ -942,7 +765,7 @@ if (typeof window._appInitialized === 'undefined') {
         document.getElementById("editUserModalBody").innerHTML = modalHtml;
         document.getElementById("editUserModal").style.display = "flex";
     }
-
+    
     async function saveEditedUser() {
         let newUsername = document.getElementById("editUsername").value.trim();
         let newEmail = document.getElementById("editEmail").value.trim();
@@ -964,7 +787,7 @@ if (typeof window._appInitialized === 'undefined') {
         }
         closeEditUserModal();
     }
-
+    
     function closeEditUserModal() {
         document.getElementById("editUserModal").style.display = "none";
         currentEditUserId = null;
@@ -972,41 +795,23 @@ if (typeof window._appInitialized === 'undefined') {
     function closeEditUserModalOnOutside(event) {
         if(event.target === document.getElementById("editUserModal")) closeEditUserModal();
     }
+    
+    async function deleteUser(userId) {
+        if(confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) {
+            users = users.filter(u => u.id !== userId);
+            meetings = meetings.filter(m => m.userId !== userId);
+            await syncUsers();
+            await syncMeetings();
+            debounceRender();
+            showToast("کاربر حذف شد");
+        }
+    }
 
-    function renderUsersCards() {
-        let container = document.getElementById("usersCardsContainer");
-        if(!container) return;
-        if(users.length === 0) { 
-            container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>No users added yet.</div>"; 
-            return; 
-        }
-        
-        let html = '';
-        for(let u of users) {
-            let userMeetings = meetings.filter(m => m.userId === u.id);
-            let meetingCount = userMeetings.length;
-            let totalDuration = userMeetings.reduce((sum, m) => sum + m.duration, 0);
-            html += `
-                <div class="user-card">
-                    <div class="flex justify-between items-start mb-3">
-                        <button onclick="openScheduleModal(${u.id})" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-calendar-plus mr-1"></i> Set Meeting</button>
-                        <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> Details</button>
-                    </div>
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="photo-placeholder">${getInitial(u.username)}</div>
-                        <div>
-                            <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
-                            ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
-                        </div>
-                    </div>
-                    <div class="border-t border-gray-100 pt-3 space-y-2">
-                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500"></i> Meetings:</span><span class="font-bold text-emerald-600">${meetingCount}</span></div>
-                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-hourglass-half mr-1 text-blue-500"></i> Total Duration:</span><span class="font-bold text-blue-600">${totalDuration} min</span></div>
-                    </div>
-                </div>
-            `;
-        }
-        container.innerHTML = html;
+    function updateUserCounts() {
+        document.getElementById("dashUsers") && (document.getElementById("dashUsers").innerText = users.length);
+        document.getElementById("userCountBadge") && (document.getElementById("userCountBadge").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
+        document.getElementById("userListCount") && (document.getElementById("userListCount").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
+        document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetings.length);
     }
 
     function renderTasksAndReminders() {
@@ -1071,14 +876,93 @@ if (typeof window._appInitialized === 'undefined') {
             remindersContainer.innerHTML = remindersHtml;
         }
     }
-
-    function renderUserSelect() {
-        let sel = document.getElementById("meetingUserSelect");
-        if(sel) { 
-            let options = '<option value="">-- Select User --</option>'; 
-            for(let u of users) options += `<option value="${u.id}">${escapeHtml(u.username)}</option>`; 
-            sel.innerHTML = options; 
+    
+    async function markTaskComplete(id) {
+        let item = tasks.find(t => t.id === id);
+        if(item) {
+            item.completed = true;
+            await syncTasks();
+            renderTasksAndReminders();
+            showToast(`"${item.title}" completed`);
         }
+    }
+
+    function openScheduleModal(userId) {
+        let user = users.find(u => u.id === userId);
+        if(!user) return;
+        document.getElementById("scheduleModalTitle").innerHTML = `<i class="fas fa-calendar-plus mr-1 text-emerald-600"></i>Schedule for ${escapeHtml(user.username)}`;
+        
+        let html = `
+            <div class="space-y-3">
+                <div><input type="datetime-local" id="scheduleDateTime" class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><input type="number" id="scheduleDuration" placeholder="Duration (min)" class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
+                    <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
+                    <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
+                    <option value="Project Review">📁 Project Review</option>
+                    <option value="Strategic">🎯 Strategic</option>
+                    <option value="One on One">🤝 One on One</option>
+                </select></div>
+                <div><textarea id="scheduleMom" rows="2" placeholder="MOM..." class="w-full border rounded-lg p-2 text-sm"></textarea></div>
+                <div class="flex gap-2"><button onclick="saveScheduledMeeting(${userId})" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm">Save</button><button onclick="closeScheduleModal()" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm">Cancel</button></div>
+            </div>
+        `;
+        document.getElementById("scheduleModalBody").innerHTML = html;
+        document.getElementById("scheduleModal").style.display = "flex";
+    }
+    
+    async function saveScheduledMeeting(userId) {
+        let dateTime = document.getElementById("scheduleDateTime").value;
+        let duration = document.getElementById("scheduleDuration").value;
+        let type = document.getElementById("scheduleType").value;
+        let mom = document.getElementById("scheduleMom").value.trim() || "No MOM";
+        if(!dateTime) { showToast("Select date & time!", "error"); return; }
+        if(!duration) { showToast("Enter duration!", "error"); return; }
+        let [date, time] = dateTime.split('T');
+        let timeFormatted = time.substring(0, 5);
+        let user = users.find(u => u.id === userId);
+        if(!user) return;
+        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
+        await syncMeetings();
+        closeScheduleModal();
+        debounceRender();
+        showToast(`Meeting scheduled for ${user.username}`);
+    }
+
+    function renderUsersCards() {
+        let container = document.getElementById("usersCardsContainer");
+        if(!container) return;
+        if(users.length === 0) { 
+            container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>No users added yet.</div>"; 
+            return; 
+        }
+        
+        let html = '';
+        for(let u of users) {
+            let userMeetings = meetings.filter(m => m.userId === u.id);
+            let meetingCount = userMeetings.length;
+            let totalDuration = userMeetings.reduce((sum, m) => sum + m.duration, 0);
+            html += `
+                <div class="user-card">
+                    <div class="flex justify-between items-start mb-3">
+                        <button onclick="openScheduleModal(${u.id})" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-calendar-plus mr-1"></i> Set Meeting</button>
+                        <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> Details</button>
+                    </div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="photo-placeholder">${getInitial(u.username)}</div>
+                        <div>
+                            <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
+                            ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-100 pt-3 space-y-2">
+                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500"></i> Meetings:</span><span class="font-bold text-emerald-600">${meetingCount}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-hourglass-half mr-1 text-blue-500"></i> Total Duration:</span><span class="font-bold text-blue-600">${totalDuration} min</span></div>
+                    </div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
     }
 
     function showUserDetails(userId) {
@@ -1110,7 +994,7 @@ if (typeof window._appInitialized === 'undefined') {
         }
         document.getElementById("userModal").style.display = "flex";
     }
-
+    
     async function deleteMeeting(meetingId) {
         if(confirm("Delete this meeting?")) {
             meetings = meetings.filter(m => m.id !== meetingId);
@@ -1120,49 +1004,7 @@ if (typeof window._appInitialized === 'undefined') {
             showToast("Meeting deleted");
         }
     }
-
-    function openScheduleModal(userId) {
-        let user = users.find(u => u.id === userId);
-        if(!user) return;
-        document.getElementById("scheduleModalTitle").innerHTML = `<i class="fas fa-calendar-plus mr-1 text-emerald-600"></i>Schedule for ${escapeHtml(user.username)}`;
-        
-        let html = `
-            <div class="space-y-3">
-                <div><input type="datetime-local" id="scheduleDateTime" class="w-full border rounded-lg p-2 text-sm"></div>
-                <div><input type="number" id="scheduleDuration" placeholder="Duration (min)" class="w-full border rounded-lg p-2 text-sm"></div>
-                <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
-                    <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
-                    <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
-                    <option value="Project Review">📁 Project Review</option>
-                    <option value="Strategic">🎯 Strategic</option>
-                    <option value="One on One">🤝 One on One</option>
-                </select></div>
-                <div><textarea id="scheduleMom" rows="2" placeholder="MOM..." class="w-full border rounded-lg p-2 text-sm"></textarea></div>
-                <div class="flex gap-2"><button onclick="saveScheduledMeeting(${userId})" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm">Save</button><button onclick="closeScheduleModal()" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm">Cancel</button></div>
-            </div>
-        `;
-        document.getElementById("scheduleModalBody").innerHTML = html;
-        document.getElementById("scheduleModal").style.display = "flex";
-    }
-
-    async function saveScheduledMeeting(userId) {
-        let dateTime = document.getElementById("scheduleDateTime").value;
-        let duration = document.getElementById("scheduleDuration").value;
-        let type = document.getElementById("scheduleType").value;
-        let mom = document.getElementById("scheduleMom").value.trim() || "No MOM";
-        if(!dateTime) { showToast("Select date & time!", "error"); return; }
-        if(!duration) { showToast("Enter duration!", "error"); return; }
-        let [date, time] = dateTime.split('T');
-        let timeFormatted = time.substring(0, 5);
-        let user = users.find(u => u.id === userId);
-        if(!user) return;
-        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
-        await syncMeetings();
-        closeScheduleModal();
-        debounceRender();
-        showToast(`Meeting scheduled for ${user.username}`);
-    }
-
+    
     function closeModal() { document.getElementById("userModal").style.display = "none"; }
     function closeEditModal() { document.getElementById("editModal").style.display = "none"; }
     function closeScheduleModal() { document.getElementById("scheduleModal").style.display = "none"; }
@@ -1171,7 +1013,94 @@ if (typeof window._appInitialized === 'undefined') {
     function closeScheduleModalOnOutside(event) { if(event.target === document.getElementById("scheduleModal")) closeScheduleModal(); }
     function closeAddUserModal() { document.getElementById("addUserModal").style.display = "none"; }
     function closeAddUserModalOnOutside(event) { if(event.target === document.getElementById("addUserModal")) closeAddUserModal(); }
-    function openAddUserModal() { document.getElementById("addUserModal").style.display = "flex"; document.getElementById("newUsername").value = ""; }
+
+    function renderUserSelect() {
+        let sel = document.getElementById("meetingUserSelect");
+        if(sel) { 
+            let options = '<option value="">-- Select User --</option>'; 
+            for(let u of users) options += `<option value="${u.id}">${escapeHtml(u.username)}</option>`; 
+            sel.innerHTML = options; 
+        }
+    }
+
+    async function addTaskOrReminder() {
+        let type = document.getElementById("itemType").value;
+        let title = document.getElementById("itemTitle").value.trim();
+        let date = document.getElementById("itemDate").value;
+        let time = document.getElementById("itemTime").value;
+        if(!title || !date || !time) { showToast("Fill all fields!", "error"); return; }
+        if(type === "task") {
+            let priority = document.getElementById("taskPriority").value;
+            tasks.push({ id: Date.now(), type: "task", title, date, time, priority, completed: false });
+        } else {
+            let description = document.getElementById("reminderDesc").value.trim() || "No description";
+            tasks.push({ id: Date.now(), type: "reminder", title, date, time, description, completed: false });
+        }
+        await syncTasks();
+        renderTasksAndReminders();
+        document.getElementById("itemTitle").value = "";
+        document.getElementById("itemDate").value = "";
+        document.getElementById("itemTime").value = "";
+        document.getElementById("reminderDesc").value = "";
+        showToast(`${type === "task" ? "Task" : "Reminder"} added`);
+    }
+
+    async function deleteTask(id) {
+        if(confirm("Delete?")) {
+            tasks = tasks.filter(t => t.id !== id);
+            await syncTasks();
+            renderTasksAndReminders();
+            showToast("Deleted");
+        }
+    }
+
+    async function handleExcelUpload(input) {
+        let file = input.files[0];
+        if(!file) return;
+        let reader = new FileReader();
+        reader.onload = async function(e) {
+            let data = new Uint8Array(e.target.result);
+            let workbook = XLSX.read(data, { type: 'array' });
+            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            let rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+            let added = 0;
+            for(let i = 0; i < rows.length; i++) {
+                let row = rows[i];
+                if(!row || row.length === 0) continue;
+                let username = row[0] ? String(row[0]).trim() : "";
+                if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
+                if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
+                    users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
+                    added++;
+                }
+            }
+            if(added > 0) { await syncUsers(); debounceRender(); showToast(`${added} user(s) added`); }
+            else { showToast("No valid users found", "error"); }
+            input.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    async function addMeeting() {
+        let userId = document.getElementById("meetingUserSelect").value;
+        if(!userId) { showToast("Select a user!", "error"); return; }
+        let dateTime = document.getElementById("meetingDateTime").value;
+        let duration = document.getElementById("meetingDuration").value;
+        let type = document.getElementById("meetingType").value;
+        let mom = document.getElementById("meetingMom").value.trim() || "No MOM";
+        if(!dateTime || !duration) { showToast("Fill all fields!", "error"); return; }
+        let [date, time] = dateTime.split('T');
+        let timeFormatted = time.substring(0, 5);
+        let user = users.find(u => u.id == userId);
+        if(!user) return;
+        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
+        await syncMeetings();
+        document.getElementById("meetingDateTime").value = "";
+        document.getElementById("meetingDuration").value = "";
+        document.getElementById("meetingMom").value = "";
+        debounceRender();
+        showToast(`Meeting scheduled for ${user.username}`);
+    }
 
     function toggleTaskReminderFields() {
         let type = document.getElementById("itemType").value;
@@ -1179,7 +1108,23 @@ if (typeof window._appInitialized === 'undefined') {
         document.getElementById("reminderDesc").style.display = type === "reminder" ? "block" : "none";
     }
 
-    // ==================== EXPORT ====================
+    function openAddUserModal() {
+        document.getElementById("addUserModal").style.display = "flex";
+        document.getElementById("newUsername").value = "";
+    }
+    
+    async function saveNewUser() {
+        let username = document.getElementById("newUsername").value.trim();
+        if(!username) { showToast("Username required!", "error"); return; }
+        if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
+        if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
+        users.push({ id: Date.now(), username: username, email: "" });
+        await syncUsers();
+        debounceRender();
+        closeAddUserModal();
+        showToast(`User "${username}" added`);
+    }
+
     function exportMeetingsReport() {
         let report = meetings.map(m => ({ User: m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
         downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
@@ -1235,33 +1180,6 @@ if (typeof window._appInitialized === 'undefined') {
         };
         reader.readAsText(file);
     }
-
-    async function handleExcelUpload(input) {
-        let file = input.files[0];
-        if(!file) return;
-        let reader = new FileReader();
-        reader.onload = async function(e) {
-            let data = new Uint8Array(e.target.result);
-            let workbook = XLSX.read(data, { type: 'array' });
-            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            let rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            let added = 0;
-            for(let i = 0; i < rows.length; i++) {
-                let row = rows[i];
-                if(!row || row.length === 0) continue;
-                let username = row[0] ? String(row[0]).trim() : "";
-                if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
-                if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
-                    users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
-                    added++;
-                }
-            }
-            if(added > 0) { await syncUsers(); debounceRender(); showToast(`${added} user(s) added`); }
-            else { showToast("No valid users found", "error"); }
-            input.value = '';
-        };
-        reader.readAsArrayBuffer(file);
-    }
     
     function downloadFile(content, filename) {
         let blob = new Blob([content], { type: "application/json" });
@@ -1271,13 +1189,6 @@ if (typeof window._appInitialized === 'undefined') {
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
-    }
-
-    function updateUserCounts() {
-        document.getElementById("dashUsers") && (document.getElementById("dashUsers").innerText = users.length);
-        document.getElementById("userCountBadge") && (document.getElementById("userCountBadge").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
-        document.getElementById("userListCount") && (document.getElementById("userListCount").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
-        document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetings.length);
     }
 
     function updateDashboardAndCharts() {
@@ -1305,15 +1216,6 @@ if (typeof window._appInitialized === 'undefined') {
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
 
-    function renderAll() { 
-        renderUserSelect(); 
-        renderUsersCards();
-        renderUsersList();
-        renderTasksAndReminders();
-        updateDashboardAndCharts(); 
-        updateUserCounts();
-    }
-
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
         document.getElementById(`${tabId}-tab`).classList.remove('hidden');
@@ -1332,7 +1234,7 @@ if (typeof window._appInitialized === 'undefined') {
 
     // ==================== INIT ====================
     toggleTaskReminderFields();
-    loadAllData();
+    loadData();
     switchTab('dashboard');
 }
 </script>

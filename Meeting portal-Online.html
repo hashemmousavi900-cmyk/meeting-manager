@@ -251,16 +251,6 @@
             transition: all 0.15s;
         }
         
-        .user-photo {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
-        
         .photo-placeholder {
             width: 60px;
             height: 60px;
@@ -594,6 +584,10 @@
 </div>
 
 <script>
+// جلوگیری از خطای تکرار declaration
+if (typeof window._appInitialized === 'undefined') {
+    window._appInitialized = true;
+
     // ========== تنظیمات Supabase ==========
     const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
@@ -623,10 +617,9 @@
         }, 50);
     }
 
-    function getPhotoUrl(username) {
-        if(!username) return null;
-        let fileName = username.replace(/\s/g, '').toLowerCase();
-        return `${SUPABASE_URL}/storage/v1/object/public/user-photos/${fileName}.png`;
+    function getInitial(name) {
+        if(!name) return "?";
+        return name.charAt(0).toUpperCase();
     }
 
     // ==================== LOAD FROM SUPABASE ====================
@@ -675,11 +668,94 @@
             await supabase.from('tasks').upsert(t,{onConflict:'id'});
         }
     }
-    
-    async function saveUsers(){ await syncUsers(); }
-    async function saveMeetings(){ await syncMeetings(); }
-    async function saveTasks(){ await syncTasks(); }
 
+    // ==================== CRUD FUNCTIONS ====================
+    async function saveNewUser() {
+        let username = document.getElementById("newUsername").value.trim();
+        if(!username) { showToast("Username required!", "error"); return; }
+        if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
+        if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
+        users.push({ id: Date.now(), username: username, email: "" });
+        await syncUsers();
+        closeAddUserModal();
+        debounceRender();
+        showToast(`User "${username}" added`);
+    }
+
+    async function deleteUser(userId) {
+        if(confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) {
+            users = users.filter(u => u.id !== userId);
+            meetings = meetings.filter(m => m.userId !== userId);
+            await syncUsers();
+            await syncMeetings();
+            debounceRender();
+            showToast("کاربر حذف شد");
+        }
+    }
+
+    async function addMeeting() {
+        let userId = document.getElementById("meetingUserSelect").value;
+        if(!userId) { showToast("Select a user!", "error"); return; }
+        let dateTime = document.getElementById("meetingDateTime").value;
+        let duration = document.getElementById("meetingDuration").value;
+        let type = document.getElementById("meetingType").value;
+        let mom = document.getElementById("meetingMom").value.trim() || "No MOM";
+        if(!dateTime || !duration) { showToast("Fill all fields!", "error"); return; }
+        let [date, time] = dateTime.split('T');
+        let timeFormatted = time.substring(0, 5);
+        let user = users.find(u => u.id == userId);
+        if(!user) return;
+        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
+        await syncMeetings();
+        document.getElementById("meetingDateTime").value = "";
+        document.getElementById("meetingDuration").value = "";
+        document.getElementById("meetingMom").value = "";
+        debounceRender();
+        showToast(`Meeting scheduled for ${user.username}`);
+    }
+
+    async function addTaskOrReminder() {
+        let type = document.getElementById("itemType").value;
+        let title = document.getElementById("itemTitle").value.trim();
+        let date = document.getElementById("itemDate").value;
+        let time = document.getElementById("itemTime").value;
+        if(!title || !date || !time) { showToast("Fill all fields!", "error"); return; }
+        if(type === "task") {
+            let priority = document.getElementById("taskPriority").value;
+            tasks.push({ id: Date.now(), type: "task", title, date, time, priority, completed: false });
+        } else {
+            let description = document.getElementById("reminderDesc").value.trim() || "No description";
+            tasks.push({ id: Date.now(), type: "reminder", title, date, time, description, completed: false });
+        }
+        await syncTasks();
+        renderTasksAndReminders();
+        document.getElementById("itemTitle").value = "";
+        document.getElementById("itemDate").value = "";
+        document.getElementById("itemTime").value = "";
+        document.getElementById("reminderDesc").value = "";
+        showToast(`${type === "task" ? "Task" : "Reminder"} added`);
+    }
+
+    async function deleteTask(id) {
+        if(confirm("Delete?")) {
+            tasks = tasks.filter(t => t.id !== id);
+            await syncTasks();
+            renderTasksAndReminders();
+            showToast("Deleted");
+        }
+    }
+
+    async function markTaskComplete(id) {
+        let item = tasks.find(t => t.id === id);
+        if(item) {
+            item.completed = true;
+            await syncTasks();
+            renderTasksAndReminders();
+            showToast(`"${item.title}" completed`);
+        }
+    }
+
+    // ==================== GROUP MEETING ====================
     function openGroupMeetingModal() {
         if(users.length === 0) {
             showToast("لطفا ابتدا کاربر اضافه کنید!", "error");
@@ -717,7 +793,7 @@
                             <div class="user-select-item flex items-center gap-2 p-1.5 rounded-lg bg-white shadow-sm">
                                 <input type="checkbox" id="user_${user.id}" value="${user.id}" class="group-checkbox" onchange="updateSelectedCount()">
                                 <label for="user_${user.id}" class="flex-1 text-gray-700 text-sm cursor-pointer">${escapeHtml(user.username)}</label>
-                                <div class="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">${getInitial(user.username)}</div>
+                                <div class="photo-placeholder w-6 h-6 text-xs">${getInitial(user.username)}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -804,24 +880,7 @@
         if(event.target === document.getElementById("groupMeetingModal")) closeGroupMeetingModal();
     }
 
-    async function loadData() {
-        await loadAllData();
-    }
-
-    function renderAll() { 
-        renderUserSelect(); 
-        renderUsersCards();
-        renderUsersList();
-        renderTasksAndReminders();
-        updateDashboardAndCharts(); 
-        updateUserCounts();
-    }
-
-    function getInitial(name) {
-        if(!name) return "?";
-        return name.charAt(0).toUpperCase();
-    }
-
+    // ==================== RENDER FUNCTIONS ====================
     function renderUsersList() {
         let container = document.getElementById("usersListContainer");
         if(!container) return;
@@ -858,7 +917,7 @@
         }
         container.innerHTML = html;
     }
-    
+
     function openEditUserModal(userId) {
         let user = users.find(u => u.id === userId);
         if(!user) return;
@@ -883,7 +942,7 @@
         document.getElementById("editUserModalBody").innerHTML = modalHtml;
         document.getElementById("editUserModal").style.display = "flex";
     }
-    
+
     async function saveEditedUser() {
         let newUsername = document.getElementById("editUsername").value.trim();
         let newEmail = document.getElementById("editEmail").value.trim();
@@ -905,7 +964,7 @@
         }
         closeEditUserModal();
     }
-    
+
     function closeEditUserModal() {
         document.getElementById("editUserModal").style.display = "none";
         currentEditUserId = null;
@@ -913,23 +972,41 @@
     function closeEditUserModalOnOutside(event) {
         if(event.target === document.getElementById("editUserModal")) closeEditUserModal();
     }
-    
-    async function deleteUser(userId) {
-        if(confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) {
-            users = users.filter(u => u.id !== userId);
-            meetings = meetings.filter(m => m.userId !== userId);
-            await syncUsers();
-            await syncMeetings();
-            debounceRender();
-            showToast("کاربر حذف شد");
-        }
-    }
 
-    function updateUserCounts() {
-        document.getElementById("dashUsers") && (document.getElementById("dashUsers").innerText = users.length);
-        document.getElementById("userCountBadge") && (document.getElementById("userCountBadge").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
-        document.getElementById("userListCount") && (document.getElementById("userListCount").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
-        document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetings.length);
+    function renderUsersCards() {
+        let container = document.getElementById("usersCardsContainer");
+        if(!container) return;
+        if(users.length === 0) { 
+            container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>No users added yet.</div>"; 
+            return; 
+        }
+        
+        let html = '';
+        for(let u of users) {
+            let userMeetings = meetings.filter(m => m.userId === u.id);
+            let meetingCount = userMeetings.length;
+            let totalDuration = userMeetings.reduce((sum, m) => sum + m.duration, 0);
+            html += `
+                <div class="user-card">
+                    <div class="flex justify-between items-start mb-3">
+                        <button onclick="openScheduleModal(${u.id})" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-calendar-plus mr-1"></i> Set Meeting</button>
+                        <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> Details</button>
+                    </div>
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="photo-placeholder">${getInitial(u.username)}</div>
+                        <div>
+                            <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
+                            ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-100 pt-3 space-y-2">
+                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500"></i> Meetings:</span><span class="font-bold text-emerald-600">${meetingCount}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-hourglass-half mr-1 text-blue-500"></i> Total Duration:</span><span class="font-bold text-blue-600">${totalDuration} min</span></div>
+                    </div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
     }
 
     function renderTasksAndReminders() {
@@ -994,93 +1071,14 @@
             remindersContainer.innerHTML = remindersHtml;
         }
     }
-    
-    async function markTaskComplete(id) {
-        let item = tasks.find(t => t.id === id);
-        if(item) {
-            item.completed = true;
-            await syncTasks();
-            renderTasksAndReminders();
-            showToast(`"${item.title}" completed`);
-        }
-    }
 
-    function openScheduleModal(userId) {
-        let user = users.find(u => u.id === userId);
-        if(!user) return;
-        document.getElementById("scheduleModalTitle").innerHTML = `<i class="fas fa-calendar-plus mr-1 text-emerald-600"></i>Schedule for ${escapeHtml(user.username)}`;
-        
-        let html = `
-            <div class="space-y-3">
-                <div><input type="datetime-local" id="scheduleDateTime" class="w-full border rounded-lg p-2 text-sm"></div>
-                <div><input type="number" id="scheduleDuration" placeholder="Duration (min)" class="w-full border rounded-lg p-2 text-sm"></div>
-                <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
-                    <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
-                    <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
-                    <option value="Project Review">📁 Project Review</option>
-                    <option value="Strategic">🎯 Strategic</option>
-                    <option value="One on One">🤝 One on One</option>
-                </select></div>
-                <div><textarea id="scheduleMom" rows="2" placeholder="MOM..." class="w-full border rounded-lg p-2 text-sm"></textarea></div>
-                <div class="flex gap-2"><button onclick="saveScheduledMeeting(${userId})" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm">Save</button><button onclick="closeScheduleModal()" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm">Cancel</button></div>
-            </div>
-        `;
-        document.getElementById("scheduleModalBody").innerHTML = html;
-        document.getElementById("scheduleModal").style.display = "flex";
-    }
-    
-    async function saveScheduledMeeting(userId) {
-        let dateTime = document.getElementById("scheduleDateTime").value;
-        let duration = document.getElementById("scheduleDuration").value;
-        let type = document.getElementById("scheduleType").value;
-        let mom = document.getElementById("scheduleMom").value.trim() || "No MOM";
-        if(!dateTime) { showToast("Select date & time!", "error"); return; }
-        if(!duration) { showToast("Enter duration!", "error"); return; }
-        let [date, time] = dateTime.split('T');
-        let timeFormatted = time.substring(0, 5);
-        let user = users.find(u => u.id === userId);
-        if(!user) return;
-        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
-        await syncMeetings();
-        closeScheduleModal();
-        debounceRender();
-        showToast(`Meeting scheduled for ${user.username}`);
-    }
-
-    function renderUsersCards() {
-        let container = document.getElementById("usersCardsContainer");
-        if(!container) return;
-        if(users.length === 0) { 
-            container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>No users added yet.</div>"; 
-            return; 
+    function renderUserSelect() {
+        let sel = document.getElementById("meetingUserSelect");
+        if(sel) { 
+            let options = '<option value="">-- Select User --</option>'; 
+            for(let u of users) options += `<option value="${u.id}">${escapeHtml(u.username)}</option>`; 
+            sel.innerHTML = options; 
         }
-        
-        let html = '';
-        for(let u of users) {
-            let userMeetings = meetings.filter(m => m.userId === u.id);
-            let meetingCount = userMeetings.length;
-            let totalDuration = userMeetings.reduce((sum, m) => sum + m.duration, 0);
-            html += `
-                <div class="user-card">
-                    <div class="flex justify-between items-start mb-3">
-                        <button onclick="openScheduleModal(${u.id})" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-calendar-plus mr-1"></i> Set Meeting</button>
-                        <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> Details</button>
-                    </div>
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="photo-placeholder">${getInitial(u.username)}</div>
-                        <div>
-                            <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
-                            ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
-                        </div>
-                    </div>
-                    <div class="border-t border-gray-100 pt-3 space-y-2">
-                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500"></i> Meetings:</span><span class="font-bold text-emerald-600">${meetingCount}</span></div>
-                        <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-hourglass-half mr-1 text-blue-500"></i> Total Duration:</span><span class="font-bold text-blue-600">${totalDuration} min</span></div>
-                    </div>
-                </div>
-            `;
-        }
-        container.innerHTML = html;
     }
 
     function showUserDetails(userId) {
@@ -1112,7 +1110,7 @@
         }
         document.getElementById("userModal").style.display = "flex";
     }
-    
+
     async function deleteMeeting(meetingId) {
         if(confirm("Delete this meeting?")) {
             meetings = meetings.filter(m => m.id !== meetingId);
@@ -1122,7 +1120,49 @@
             showToast("Meeting deleted");
         }
     }
-    
+
+    function openScheduleModal(userId) {
+        let user = users.find(u => u.id === userId);
+        if(!user) return;
+        document.getElementById("scheduleModalTitle").innerHTML = `<i class="fas fa-calendar-plus mr-1 text-emerald-600"></i>Schedule for ${escapeHtml(user.username)}`;
+        
+        let html = `
+            <div class="space-y-3">
+                <div><input type="datetime-local" id="scheduleDateTime" class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><input type="number" id="scheduleDuration" placeholder="Duration (min)" class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
+                    <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
+                    <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
+                    <option value="Project Review">📁 Project Review</option>
+                    <option value="Strategic">🎯 Strategic</option>
+                    <option value="One on One">🤝 One on One</option>
+                </select></div>
+                <div><textarea id="scheduleMom" rows="2" placeholder="MOM..." class="w-full border rounded-lg p-2 text-sm"></textarea></div>
+                <div class="flex gap-2"><button onclick="saveScheduledMeeting(${userId})" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm">Save</button><button onclick="closeScheduleModal()" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm">Cancel</button></div>
+            </div>
+        `;
+        document.getElementById("scheduleModalBody").innerHTML = html;
+        document.getElementById("scheduleModal").style.display = "flex";
+    }
+
+    async function saveScheduledMeeting(userId) {
+        let dateTime = document.getElementById("scheduleDateTime").value;
+        let duration = document.getElementById("scheduleDuration").value;
+        let type = document.getElementById("scheduleType").value;
+        let mom = document.getElementById("scheduleMom").value.trim() || "No MOM";
+        if(!dateTime) { showToast("Select date & time!", "error"); return; }
+        if(!duration) { showToast("Enter duration!", "error"); return; }
+        let [date, time] = dateTime.split('T');
+        let timeFormatted = time.substring(0, 5);
+        let user = users.find(u => u.id === userId);
+        if(!user) return;
+        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
+        await syncMeetings();
+        closeScheduleModal();
+        debounceRender();
+        showToast(`Meeting scheduled for ${user.username}`);
+    }
+
     function closeModal() { document.getElementById("userModal").style.display = "none"; }
     function closeEditModal() { document.getElementById("editModal").style.display = "none"; }
     function closeScheduleModal() { document.getElementById("scheduleModal").style.display = "none"; }
@@ -1131,94 +1171,7 @@
     function closeScheduleModalOnOutside(event) { if(event.target === document.getElementById("scheduleModal")) closeScheduleModal(); }
     function closeAddUserModal() { document.getElementById("addUserModal").style.display = "none"; }
     function closeAddUserModalOnOutside(event) { if(event.target === document.getElementById("addUserModal")) closeAddUserModal(); }
-
-    function renderUserSelect() {
-        let sel = document.getElementById("meetingUserSelect");
-        if(sel) { 
-            let options = '<option value="">-- Select User --</option>'; 
-            for(let u of users) options += `<option value="${u.id}">${escapeHtml(u.username)}</option>`; 
-            sel.innerHTML = options; 
-        }
-    }
-
-    async function addTaskOrReminder() {
-        let type = document.getElementById("itemType").value;
-        let title = document.getElementById("itemTitle").value.trim();
-        let date = document.getElementById("itemDate").value;
-        let time = document.getElementById("itemTime").value;
-        if(!title || !date || !time) { showToast("Fill all fields!", "error"); return; }
-        if(type === "task") {
-            let priority = document.getElementById("taskPriority").value;
-            tasks.push({ id: Date.now(), type: "task", title, date, time, priority, completed: false });
-        } else {
-            let description = document.getElementById("reminderDesc").value.trim() || "No description";
-            tasks.push({ id: Date.now(), type: "reminder", title, date, time, description, completed: false });
-        }
-        await syncTasks();
-        renderTasksAndReminders();
-        document.getElementById("itemTitle").value = "";
-        document.getElementById("itemDate").value = "";
-        document.getElementById("itemTime").value = "";
-        document.getElementById("reminderDesc").value = "";
-        showToast(`${type === "task" ? "Task" : "Reminder"} added`);
-    }
-
-    async function deleteTask(id) {
-        if(confirm("Delete?")) {
-            tasks = tasks.filter(t => t.id !== id);
-            await syncTasks();
-            renderTasksAndReminders();
-            showToast("Deleted");
-        }
-    }
-
-    async function handleExcelUpload(input) {
-        let file = input.files[0];
-        if(!file) return;
-        let reader = new FileReader();
-        reader.onload = async function(e) {
-            let data = new Uint8Array(e.target.result);
-            let workbook = XLSX.read(data, { type: 'array' });
-            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            let rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-            let added = 0;
-            for(let i = 0; i < rows.length; i++) {
-                let row = rows[i];
-                if(!row || row.length === 0) continue;
-                let username = row[0] ? String(row[0]).trim() : "";
-                if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
-                if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
-                    users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
-                    added++;
-                }
-            }
-            if(added > 0) { await syncUsers(); debounceRender(); showToast(`${added} user(s) added`); }
-            else { showToast("No valid users found", "error"); }
-            input.value = '';
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
-    async function addMeeting() {
-        let userId = document.getElementById("meetingUserSelect").value;
-        if(!userId) { showToast("Select a user!", "error"); return; }
-        let dateTime = document.getElementById("meetingDateTime").value;
-        let duration = document.getElementById("meetingDuration").value;
-        let type = document.getElementById("meetingType").value;
-        let mom = document.getElementById("meetingMom").value.trim() || "No MOM";
-        if(!dateTime || !duration) { showToast("Fill all fields!", "error"); return; }
-        let [date, time] = dateTime.split('T');
-        let timeFormatted = time.substring(0, 5);
-        let user = users.find(u => u.id == userId);
-        if(!user) return;
-        meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
-        await syncMeetings();
-        document.getElementById("meetingDateTime").value = "";
-        document.getElementById("meetingDuration").value = "";
-        document.getElementById("meetingMom").value = "";
-        debounceRender();
-        showToast(`Meeting scheduled for ${user.username}`);
-    }
+    function openAddUserModal() { document.getElementById("addUserModal").style.display = "flex"; document.getElementById("newUsername").value = ""; }
 
     function toggleTaskReminderFields() {
         let type = document.getElementById("itemType").value;
@@ -1226,23 +1179,7 @@
         document.getElementById("reminderDesc").style.display = type === "reminder" ? "block" : "none";
     }
 
-    function openAddUserModal() {
-        document.getElementById("addUserModal").style.display = "flex";
-        document.getElementById("newUsername").value = "";
-    }
-    
-    async function saveNewUser() {
-        let username = document.getElementById("newUsername").value.trim();
-        if(!username) { showToast("Username required!", "error"); return; }
-        if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
-        if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
-        users.push({ id: Date.now(), username: username, email: "" });
-        await syncUsers();
-        debounceRender();
-        closeAddUserModal();
-        showToast(`User "${username}" added`);
-    }
-
+    // ==================== EXPORT ====================
     function exportMeetingsReport() {
         let report = meetings.map(m => ({ User: m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
         downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
@@ -1298,6 +1235,33 @@
         };
         reader.readAsText(file);
     }
+
+    async function handleExcelUpload(input) {
+        let file = input.files[0];
+        if(!file) return;
+        let reader = new FileReader();
+        reader.onload = async function(e) {
+            let data = new Uint8Array(e.target.result);
+            let workbook = XLSX.read(data, { type: 'array' });
+            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            let rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+            let added = 0;
+            for(let i = 0; i < rows.length; i++) {
+                let row = rows[i];
+                if(!row || row.length === 0) continue;
+                let username = row[0] ? String(row[0]).trim() : "";
+                if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
+                if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
+                    users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
+                    added++;
+                }
+            }
+            if(added > 0) { await syncUsers(); debounceRender(); showToast(`${added} user(s) added`); }
+            else { showToast("No valid users found", "error"); }
+            input.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
     
     function downloadFile(content, filename) {
         let blob = new Blob([content], { type: "application/json" });
@@ -1307,6 +1271,13 @@
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    function updateUserCounts() {
+        document.getElementById("dashUsers") && (document.getElementById("dashUsers").innerText = users.length);
+        document.getElementById("userCountBadge") && (document.getElementById("userCountBadge").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
+        document.getElementById("userListCount") && (document.getElementById("userListCount").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
+        document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetings.length);
     }
 
     function updateDashboardAndCharts() {
@@ -1334,6 +1305,15 @@
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
 
+    function renderAll() { 
+        renderUserSelect(); 
+        renderUsersCards();
+        renderUsersList();
+        renderTasksAndReminders();
+        updateDashboardAndCharts(); 
+        updateUserCounts();
+    }
+
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
         document.getElementById(`${tabId}-tab`).classList.remove('hidden');
@@ -1350,9 +1330,11 @@
         link.addEventListener('click', (e) => { e.preventDefault(); switchTab(link.getAttribute('data-tab')); });
     });
 
-    loadData();
-    switchTab('dashboard');
+    // ==================== INIT ====================
     toggleTaskReminderFields();
+    loadAllData();
+    switchTab('dashboard');
+}
 </script>
 </body>
 </html>

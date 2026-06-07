@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سیستم مدیریت جلسات</title>
-    <!-- فقط کتابخانه‌های ضروری -->
+    <title>سیستم مدیریت جلسات | نسخه کامل حرفه‌ای</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tahoma', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background: linear-gradient(135deg, #e0f2fe, #dcfce7); min-height: 100vh; }
         
         /* سایدبار */
@@ -22,6 +24,7 @@
             right: 0;
             top: 0;
             overflow-y: auto;
+            z-index: 100;
         }
         
         .sidebar-header {
@@ -30,7 +33,7 @@
             border-bottom: 1px solid #a7f3d0;
         }
         
-        .sidebar-header h2 { color: #065f46; }
+        .sidebar-header h2 { color: #065f46; font-size: 22px; }
         .sidebar-header p { color: #047857; font-size: 11px; margin-top: 5px; }
         
         .sidebar-link {
@@ -43,12 +46,14 @@
             color: #065f46;
             cursor: pointer;
             transition: all 0.2s;
+            font-weight: 500;
         }
         
         .sidebar-link:hover { background: rgba(16, 185, 129, 0.15); }
-        .sidebar-link.active { background: #10b981; color: white; }
+        .sidebar-link.active { background: linear-gradient(95deg, #10b981, #059669); color: white; }
         .sidebar-link.active i { color: white; }
         
+        /* محتوای اصلی */
         .main-content {
             margin-right: 280px;
             padding: 20px;
@@ -56,81 +61,75 @@
         }
         
         .header {
-            background: rgba(255,255,255,0.9);
-            padding: 15px 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 15px 25px;
             border-radius: 16px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
+        /* دکمه‌ها */
         .btn-primary {
-            background: #10b981;
+            background: linear-gradient(135deg, #059669, #10b981);
             color: white;
             padding: 8px 16px;
-            border-radius: 10px;
+            border-radius: 12px;
             border: none;
             cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
         }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5,150,105,0.3); }
+        .btn-danger { background: #ef4444; color: white; padding: 6px 12px; border-radius: 8px; border: none; cursor: pointer; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #6b7280; color: white; padding: 8px 16px; border-radius: 12px; border: none; cursor: pointer; }
         
-        .btn-primary:hover { background: #059669; }
-        
+        /* کارت‌ها */
         .stat-card {
-            background: white;
+            background: rgba(255,255,255,0.95);
             border-radius: 16px;
             padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
         
         .users-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
         
         .user-card {
             background: white;
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
         }
+        .user-card:hover { transform: translateY(-5px); box-shadow: 0 20px 30px -10px rgba(0,0,0,0.15); }
         
         .avatar {
-            width: 50px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
-            background: #10b981;
+            background: linear-gradient(135deg, #10b981, #059669);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        .flex { display: flex; gap: 12px; align-items: center; }
-        .hidden { display: none; }
-        .text-center { text-align: center; }
-        .mt-2 { margin-top: 8px; }
-        .mt-4 { margin-top: 16px; }
-        .mb-2 { margin-bottom: 8px; }
-        .mb-4 { margin-bottom: 16px; }
-        .w-full { width: 100%; }
-        .gap-2 { gap: 8px; }
-        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; }
-        
-        .form-input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            margin-bottom: 12px;
-        }
-        
+        /* مدال */
         .modal {
             display: none;
             position: fixed;
@@ -139,35 +138,66 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
-        
         .modal-content {
             background: white;
-            border-radius: 20px;
-            max-width: 450px;
+            border-radius: 24px;
+            max-width: 500px;
             width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
             padding: 24px;
         }
         
+        /* فرم */
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        .form-input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.1); }
+        
+        /* توست پیام */
         .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
             background: #065f46;
             color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            animation: fadeOut 2.5s forwards;
+            padding: 10px 18px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1100;
+            font-size: 13px;
+            animation: slideIn 0.25s ease, fadeOut 0.4s ease 2.5s forwards;
         }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
         
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; visibility: hidden; }
-        }
+        /* ابزارهای کمکی */
+        .flex { display: flex; gap: 12px; align-items: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .flex-wrap { flex-wrap: wrap; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .w-full { width: 100%; }
+        .mt-2 { margin-top: 8px; }
+        .mt-4 { margin-top: 16px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .text-center { text-align: center; }
+        .text-gray { color: #6b7280; }
+        .text-emerald { color: #059669; }
+        .hidden { display: none; }
         
         @media (max-width: 768px) {
             .sidebar { width: 80px; }
@@ -182,26 +212,29 @@
 <!-- سایدبار -->
 <div class="sidebar">
     <div class="sidebar-header">
-        <h2>📅 MeetingHub</h2>
-        <p>مدیریت جلسات</p>
+        <h2>📅 Meeting<span style="color:#059669;">Hub</span></h2>
+        <p>مدیریت جلسات حرفه‌ای</p>
     </div>
     <nav>
         <div class="sidebar-link active" data-tab="dashboard">
             <i class="fas fa-chart-pie"></i> <span>داشبورد</span>
         </div>
         <div class="sidebar-link" data-tab="users">
-            <i class="fas fa-users"></i> <span>پرسنل</span>
+            <i class="fas fa-users"></i> <span>مدیریت پرسنل</span>
         </div>
         <div class="sidebar-link" data-tab="meetings">
             <i class="fas fa-calendar-check"></i> <span>جلسات</span>
         </div>
         <div class="sidebar-link" data-tab="tasks">
-            <i class="fas fa-tasks"></i> <span>وظایف</span>
+            <i class="fas fa-tasks"></i> <span>وظایف و یادآوری‌ها</span>
         </div>
         <div class="sidebar-link" data-tab="reports">
             <i class="fas fa-chart-line"></i> <span>گزارشات</span>
         </div>
     </nav>
+    <div style="position: absolute; bottom: 20px; right: 0; left: 0; text-align: center; padding: 15px; border-top: 1px solid #a7f3d0; margin: 0 15px; font-size: 10px; color: #047857;">
+        <i class="fas fa-cloud-upload-alt"></i> ذخیره ابری
+    </div>
 </div>
 
 <!-- محتوای اصلی -->
@@ -209,96 +242,147 @@
     <div class="header">
         <div class="flex-between">
             <div>
-                <h1>📊 مدیریت جلسات</h1>
-                <p style="font-size: 12px; color: gray;">نسخه تست - منوها کار می‌کنند</p>
+                <h1 style="font-size: 22px;">📊 پنل مدیریت جلسات</h1>
+                <p style="font-size: 12px; color: gray;">مدیریت پرسنل، جلسات و وظایف | اتصال به Supabase</p>
             </div>
-            <div><i class="fas fa-user"></i> <span>مدیر</span></div>
+            <div class="flex">
+                <i class="fas fa-user-circle" style="font-size: 24px; color: #059669;"></i>
+                <span style="font-size: 13px;">مدیر سیستم</span>
+            </div>
         </div>
     </div>
 
-    <!-- تب داشبورد -->
+    <!-- ==================== داشبورد ==================== -->
     <div id="dashboard-tab" class="tab-content active">
         <div class="grid-4">
-            <div class="stat-card"><div class="flex-between"><span>تعداد پرسنل</span><i class="fas fa-users"></i></div><p class="mt-2" style="font-size: 28px; font-weight: bold; color: #10b981;" id="dashUsers">0</p></div>
-            <div class="stat-card"><div class="flex-between"><span>تعداد جلسات</span><i class="fas fa-calendar-check"></i></div><p class="mt-2" style="font-size: 28px; font-weight: bold; color: #10b981;" id="dashMeetings">0</p></div>
-            <div class="stat-card"><div class="flex-between"><span>انواع جلسات</span><i class="fas fa-chart-pie"></i></div><p class="mt-2" style="font-size: 28px; font-weight: bold; color: #10b981;" id="dashTypes">0</p></div>
-            <div class="stat-card"><div class="flex-between"><span>میانگین مدت</span><i class="fas fa-hourglass-half"></i></div><p class="mt-2" style="font-size: 28px; font-weight: bold; color: #10b981;" id="dashAvg">0</p></div>
+            <div class="stat-card">
+                <div class="flex-between"><span>تعداد پرسنل</span><i class="fas fa-users" style="color: #10b981; font-size: 24px;"></i></div>
+                <p id="dashUsers" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p>
+            </div>
+            <div class="stat-card">
+                <div class="flex-between"><span>تعداد جلسات</span><i class="fas fa-calendar-check" style="color: #3b82f6; font-size: 24px;"></i></div>
+                <p id="dashMeetings" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p>
+            </div>
+            <div class="stat-card">
+                <div class="flex-between"><span>انواع جلسات</span><i class="fas fa-chart-pie" style="color: #f59e0b; font-size: 24px;"></i></div>
+                <p id="dashTypes" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p>
+            </div>
+            <div class="stat-card">
+                <div class="flex-between"><span>میانگین مدت جلسات</span><i class="fas fa-hourglass-half" style="color: #8b5cf6; font-size: 24px;"></i></div>
+                <p id="dashAvg" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p>
+            </div>
         </div>
-        <div class="stat-card text-center">
-            <p>✅ منوها با موفقیت کار می‌کنند</p>
-            <p style="font-size: 12px; color: gray; margin-top: 10px;">برای تست، روی گزینه‌های منو کلیک کنید</p>
+        <div class="stat-card">
+            <h3 class="mb-2">📈 توزیع جلسات بر اساس نوع</h3>
+            <canvas id="typeChart" height="200"></canvas>
         </div>
     </div>
 
-    <!-- تب پرسنل -->
+    <!-- ==================== مدیریت پرسنل ==================== -->
     <div id="users-tab" class="tab-content">
-        <div class="flex-between mb-4">
-            <h2>👥 مدیریت پرسنل</h2>
-            <button onclick="openAddUserModal()" class="btn-primary">➕ افزودن پرسنل</button>
+        <div class="flex-between mb-4 flex-wrap">
+            <h2 class="text-xl font-bold">👥 لیست پرسنل</h2>
+            <div class="flex">
+                <button onclick="openAddUserModal()" class="btn-primary">➕ افزودن پرسنل</button>
+                <label class="btn-primary" style="cursor: pointer;">📂 آپلود اکسل<input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelUpload(this)"></label>
+                <button onclick="exportUsersReport()" class="btn-primary">📥 خروجی JSON</button>
+                <label class="btn-primary" style="cursor: pointer;">📤 وارد کردن JSON<input type="file" id="importJSON" accept=".json" class="hidden" onchange="importJSON(this)"></label>
+            </div>
         </div>
-        <div id="usersListContainer" class="users-grid">
-            <div class="text-center text-gray-400">در حال بارگذاری...</div>
-        </div>
+        <div id="usersListContainer" class="users-grid"></div>
     </div>
 
-    <!-- تب جلسات -->
+    <!-- ==================== جلسات ==================== -->
     <div id="meetings-tab" class="tab-content">
         <div class="stat-card">
-            <h2 class="mb-4">📅 ثبت جلسه جدید</h2>
+            <div class="flex-between mb-4">
+                <h2 class="text-xl font-bold">📅 ثبت جلسه جدید</h2>
+                <button onclick="openGroupMeetingModal()" class="btn-primary">👥 جلسه گروهی</button>
+            </div>
             <select id="meetingUserSelect" class="form-input"><option value="">-- انتخاب پرسنل --</option></select>
             <input type="datetime-local" id="meetingDateTime" class="form-input">
             <input type="number" id="meetingDuration" placeholder="مدت زمان (دقیقه)" class="form-input">
             <select id="meetingType" class="form-input">
-                <option value="Individual">👤 انفرادی</option>
-                <option value="Team">👥 تیمی</option>
-                <option value="Disciplinary">⚖️ تنبیهی</option>
+                <option value="Individual">👤 انفرادی (Individual)</option>
+                <option value="Team">👥 تیمی (Team)</option>
+                <option value="Disciplinary">⚖️ تنبیهی (Disciplinary)</option>
+                <option value="CLF">📊 CLF</option>
+                <option value="Project Review">📁 بازبینی پروژه (Project Review)</option>
+                <option value="Strategic">🎯 استراتژیک (Strategic)</option>
+                <option value="One on One">🤝 یک به یک (One on One)</option>
             </select>
-            <textarea id="meetingMom" rows="2" placeholder="صورتجلسه..." class="form-input"></textarea>
+            <textarea id="meetingMom" rows="3" placeholder="صورتجلسه (MOM)..." class="form-input"></textarea>
             <button onclick="addMeeting()" class="btn-primary w-full">💾 ذخیره جلسه</button>
         </div>
-        <h2 class="mb-4">📋 خلاصه جلسات</h2>
+        <h2 class="text-xl font-bold mb-4">📋 خلاصه جلسات پرسنل</h2>
         <div id="usersCardsContainer" class="users-grid"></div>
     </div>
 
-    <!-- تب وظایف -->
+    <!-- ==================== وظایف و یادآوری‌ها ==================== -->
     <div id="tasks-tab" class="tab-content">
         <div class="stat-card">
-            <h2 class="mb-4">✅ وظایف و یادآوری‌ها</h2>
-            <div class="flex">
-                <select id="itemType" class="form-input"><option value="task">وظیفه</option><option value="reminder">یادآوری</option></select>
-                <input type="text" id="itemTitle" placeholder="عنوان" class="form-input">
+            <h2 class="text-xl font-bold mb-4">✅ افزودن وظیفه یا یادآوری</h2>
+            <div class="flex flex-wrap">
+                <select id="itemType" class="form-input" onchange="toggleTaskFields()" style="flex:1;">
+                    <option value="task">وظیفه (Task)</option>
+                    <option value="reminder">یادآوری (Reminder)</option>
+                </select>
+                <input type="text" id="itemTitle" placeholder="عنوان" class="form-input" style="flex:2;">
             </div>
-            <div class="flex">
+            <div class="flex flex-wrap">
                 <input type="date" id="itemDate" class="form-input">
                 <input type="time" id="itemTime" class="form-input">
-                <select id="taskPriority" class="form-input"><option value="low">کم</option><option value="medium">متوسط</option><option value="high">زیاد</option></select>
+                <select id="taskPriority" class="form-input">
+                    <option value="low">🟢 اولویت کم</option>
+                    <option value="medium">🟡 اولویت متوسط</option>
+                    <option value="high">🔴 اولویت زیاد</option>
+                </select>
             </div>
-            <textarea id="reminderDesc" rows="2" placeholder="توضیحات..." class="form-input" style="display:none;"></textarea>
-            <button onclick="addTaskOrReminder()" class="btn-primary w-full">➕ افزودن</button>
+            <textarea id="reminderDesc" rows="2" placeholder="توضیحات (برای یادآوری)" class="form-input" style="display:none;"></textarea>
+            <button onclick="addTaskOrReminder()" class="btn-primary w-full mt-2">➕ افزودن</button>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div class="stat-card"><h3 class="mb-2">وظایف</h3><div id="tasksListContainer"></div></div>
-            <div class="stat-card"><h3 class="mb-2">یادآوری‌ها</h3><div id="remindersListContainer"></div></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+            <div class="stat-card">
+                <div class="flex-between mb-3"><h3 class="font-bold">📋 وظایف</h3><span id="taskCount" style="background: #fef3c7; padding: 2px 10px; border-radius: 20px; font-size: 12px;">0</span></div>
+                <div id="tasksListContainer" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+            <div class="stat-card">
+                <div class="flex-between mb-3"><h3 class="font-bold">⏰ یادآوری‌ها</h3><span id="reminderCount" style="background: #dbeafe; padding: 2px 10px; border-radius: 20px; font-size: 12px;">0</span></div>
+                <div id="remindersListContainer" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
         </div>
     </div>
 
-    <!-- تب گزارشات -->
+    <!-- ==================== گزارشات ==================== -->
     <div id="reports-tab" class="tab-content">
-        <div class="stat-card text-center">
-            <h3 class="mb-4">📊 گزارشات</h3>
-            <button onclick="exportData()" class="btn-primary">📥 خروجی JSON</button>
+        <div class="stat-card">
+            <canvas id="reportChart" height="300"></canvas>
+        </div>
+        <div class="stat-card mt-4">
+            <h3 class="font-bold mb-3">📤 خروجی گزارشات</h3>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="exportMeetingsReport()" class="btn-primary" style="padding: 6px 12px; font-size: 12px;">📅 گزارش جلسات</button>
+                <button onclick="exportUsersReport()" class="btn-primary" style="padding: 6px 12px; font-size: 12px;">👥 گزارش پرسنل</button>
+                <button onclick="exportTasksReport()" class="btn-primary" style="padding: 6px 12px; font-size: 12px;">✅ گزارش وظایف</button>
+                <button onclick="exportFullReport()" class="btn-primary" style="padding: 6px 12px; font-size: 12px;">📊 گزارش کامل</button>
+                <button onclick="exportStatistics()" class="btn-primary" style="padding: 6px 12px; font-size: 12px;">📈 آمار</button>
+            </div>
+        </div>
+        <div class="stat-card mt-4">
+            <h3 class="font-bold mb-3">🕐 فعالیت‌های اخیر</h3>
+            <div id="recentLogs" class="space-y-1 text-sm max-h-36 overflow-y-auto"></div>
         </div>
     </div>
 </div>
 
-<!-- مودال‌ها -->
+<!-- ==================== مدال‌ها ==================== -->
 <div id="addUserModal" class="modal">
     <div class="modal-content">
-        <h3 class="mb-4">➕ افزودن پرسنل جدید</h3>
-        <input type="text" id="newUsername" placeholder="نام کامل" class="form-input">
-        <div class="flex gap-2">
+        <h3 class="text-xl font-bold mb-4">➕ افزودن پرسنل جدید</h3>
+        <input type="text" id="newUsername" placeholder="نام و نام خانوادگی" class="form-input">
+        <div class="flex gap-2 mt-4">
             <button onclick="saveNewUser()" class="btn-primary flex-1">ذخیره</button>
-            <button onclick="closeAddUserModal()" class="btn-primary flex-1" style="background:#6b7280;">انصراف</button>
+            <button onclick="closeAddUserModal()" class="btn-secondary flex-1">انصراف</button>
         </div>
     </div>
 </div>
@@ -309,56 +393,55 @@
     </div>
 </div>
 
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <h3 class="text-xl font-bold mb-4" id="modalTitle">جلسات کاربر</h3>
+        <div id="modalBody"></div>
+        <button onclick="closeModal()" class="btn-secondary w-full mt-4">بستن</button>
+    </div>
+</div>
+
+<div id="editUserModal" class="modal">
+    <div class="modal-content">
+        <h3 class="text-xl font-bold mb-4">✏️ ویرایش پرسنل</h3>
+        <div id="editUserModalBody"></div>
+    </div>
+</div>
+
 <script>
 // =====================================================
-// بخش منوها - این بخش همیشه کار می‌کند (مستقل از Supabase)
+// تنظیمات Supabase
 // =====================================================
-document.querySelectorAll('.sidebar-link').forEach(link => {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        // گرفتن نام تب
-        const tabName = this.getAttribute('data-tab');
-        
-        // تغییر کلاس active لینک‌ها
-        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-        this.classList.add('active');
-        
-        // تغییر تب‌ها
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        const activeTab = document.getElementById(`${tabName}-tab`);
-        if (activeTab) {
-            activeTab.classList.add('active');
-            console.log('✅ تب فعال شد:', tabName);
-        }
-        
-        // رفرش داده‌ها در صورت نیاز
-        if (tabName === 'users') renderUsersList();
-        if (tabName === 'meetings') renderUsersCards();
-        if (tabName === 'tasks') renderTasks();
-    });
-});
+const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-console.log('✅ منوها با موفقیت فعال شدند');
+let supabase;
+if (typeof supabaseJs !== 'undefined') {
+    supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase متصل شد');
+} else {
+    console.warn('⚠️ Supabase لود نشد، از داده‌های محلی استفاده می‌شود');
+    supabase = { from: () => ({ select: async () => ({ data: [], error: null }), upsert: async () => ({ error: null }) }) };
+}
 
 // =====================================================
-// داده‌های نمونه (بدون Supabase برای تست)
+// داده‌های اصلی
 // =====================================================
-let users = [
-    { id: 1, username: "احمد رضایی", email: "ahmad@test.com" },
-    { id: 2, username: "سارا محمدی", email: "sara@test.com" },
-    { id: 3, username: "رضا کریمی", email: "reza@test.com" }
-];
-
+let users = [];
 let meetings = [];
 let tasks = [];
+let chart1 = null, chart2 = null;
+let currentEditUserId = null;
 
-function showToast(msg) {
-    let t = document.createElement('div');
-    t.className = 'toast';
-    t.innerHTML = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2500);
+// =====================================================
+// توابع کمکی
+// =====================================================
+function showToast(msg, type = "success") {
+    let toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
 }
 
 function escapeHtml(s) {
@@ -371,16 +454,161 @@ function getInitial(name) {
 }
 
 // =====================================================
-// توابع رندر
+// منوها (مستقل - همیشه کار می‌کند)
 // =====================================================
+document.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const tabName = this.getAttribute('data-tab');
+        
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+        
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        const activeTab = document.getElementById(`${tabName}-tab`);
+        if (activeTab) activeTab.classList.add('active');
+        
+        if (tabName === 'users') renderUsersList();
+        if (tabName === 'meetings') renderUsersCards();
+        if (tabName === 'tasks') renderTasksAndReminders();
+    });
+});
+
+// =====================================================
+// عملیات Supabase
+// =====================================================
+async function loadUsers() {
+    try {
+        let { data } = await supabase.from('users').select('*');
+        if (data && data.length > 0) users = data;
+        else if (users.length === 0) {
+            users = [
+                { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
+                { id: 2, username: "سارا محمدی", email: "sara@example.com" },
+                { id: 3, username: "رضا کریمی", email: "reza@example.com" }
+            ];
+        }
+        renderUsersList();
+        updateCounts();
+    } catch(e) { console.error(e); }
+}
+
+async function loadMeetings() {
+    try {
+        let { data } = await supabase.from('meetings').select('*');
+        if (data) meetings = data;
+        renderUsersCards();
+        updateDashboardAndCharts();
+        updateCounts();
+    } catch(e) { console.error(e); }
+}
+
+async function loadTasks() {
+    try {
+        let { data } = await supabase.from('tasks').select('*');
+        if (data) tasks = data;
+        else if (tasks.length === 0) {
+            let today = new Date().toISOString().slice(0,10);
+            tasks = [
+                { id: 1, type: "task", title: "بررسی گزارش‌ها", date: today, time: "14:00", priority: "high", completed: false },
+                { id: 2, type: "reminder", title: "جلسه تیم", date: today, time: "09:30", description: "آماده کردن اسلایدها", completed: false }
+            ];
+        }
+        renderTasksAndReminders();
+    } catch(e) { console.error(e); }
+}
+
+async function syncUsers() { for(let u of users) await supabase.from('users').upsert(u, {onConflict:'id'}); }
+async function syncMeetings() { for(let m of meetings) await supabase.from('meetings').upsert(m, {onConflict:'id'}); }
+async function syncTasks() { for(let t of tasks) await supabase.from('tasks').upsert(t, {onConflict:'id'}); }
+
+// =====================================================
+// مدیریت پرسنل (CRUD)
+// =====================================================
+function openAddUserModal() {
+    document.getElementById('addUserModal').style.display = 'flex';
+    document.getElementById('newUsername').value = '';
+}
+
+function closeAddUserModal() {
+    document.getElementById('addUserModal').style.display = 'none';
+}
+
+async function saveNewUser() {
+    let username = document.getElementById('newUsername').value.trim();
+    if (!username) { showToast("لطفا نام را وارد کنید!"); return; }
+    if (users.some(u => u.username === username)) { showToast("این نام قبلا ثبت شده است!"); return; }
+    
+    let newUser = { id: Date.now(), username: username, email: "" };
+    users.push(newUser);
+    await syncUsers();
+    closeAddUserModal();
+    renderUsersList();
+    renderUserSelect();
+    updateCounts();
+    showToast(`✅ پرسنل "${username}" اضافه شد`);
+}
+
+function openEditUserModal(userId) {
+    let user = users.find(u => u.id === userId);
+    if (!user) return;
+    currentEditUserId = userId;
+    
+    let modalHtml = `
+        <input type="text" id="editUsername" value="${escapeHtml(user.username)}" class="form-input" placeholder="نام کاربری">
+        <input type="email" id="editEmail" value="${escapeHtml(user.email || '')}" class="form-input" placeholder="ایمیل">
+        <div class="flex gap-2 mt-4">
+            <button onclick="saveEditedUser()" class="btn-primary flex-1">ذخیره</button>
+            <button onclick="closeEditUserModal()" class="btn-secondary flex-1">انصراف</button>
+        </div>
+    `;
+    document.getElementById('editUserModalBody').innerHTML = modalHtml;
+    document.getElementById('editUserModal').style.display = 'flex';
+}
+
+async function saveEditedUser() {
+    let newUsername = document.getElementById('editUsername').value.trim();
+    let newEmail = document.getElementById('editEmail').value.trim();
+    
+    if (!newUsername) { showToast("نام کاربری الزامی است!"); return; }
+    
+    let userIndex = users.findIndex(u => u.id === currentEditUserId);
+    if (userIndex !== -1) {
+        users[userIndex].username = newUsername;
+        users[userIndex].email = newEmail;
+        await syncUsers();
+        meetings.forEach(m => { if (m.userId === currentEditUserId) m.userName = newUsername; });
+        await syncMeetings();
+        renderUsersList();
+        renderUsersCards();
+        renderUserSelect();
+        showToast("کاربر با موفقیت ویرایش شد");
+    }
+    closeEditUserModal();
+}
+
+function closeEditUserModal() {
+    document.getElementById('editUserModal').style.display = 'none';
+    currentEditUserId = null;
+}
+
+async function deleteUser(userId) {
+    if (!confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) return;
+    users = users.filter(u => u.id !== userId);
+    meetings = meetings.filter(m => m.userId !== userId);
+    await syncUsers();
+    await syncMeetings();
+    renderUsersList();
+    renderUsersCards();
+    renderUserSelect();
+    updateCounts();
+    showToast("کاربر حذف شد");
+}
+
 function renderUsersList() {
     let container = document.getElementById('usersListContainer');
     if (!container) return;
-    
-    if (users.length === 0) {
-        container.innerHTML = "<div class='text-center text-gray-400 py-10'>هیچ پرسنلی ثبت نشده است</div>";
-        return;
-    }
+    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>هیچ پرسنلی ثبت نشده است</div>"; return; }
     
     container.innerHTML = users.map(u => `
         <div class="user-card">
@@ -388,42 +616,16 @@ function renderUsersList() {
                 <div class="avatar">${getInitial(u.username)}</div>
                 <div>
                     <div class="font-bold">${escapeHtml(u.username)}</div>
-                    <div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} جلسه</div>
+                    <div class="text-sm text-gray">${meetings.filter(m => m.userId === u.id).length} جلسه</div>
+                    ${u.email ? `<div class="text-xs text-gray">${escapeHtml(u.email)}</div>` : ''}
                 </div>
             </div>
-            <button onclick="deleteUser(${u.id})" class="btn-primary w-full mt-2" style="background:#ef4444;">🗑️ حذف</button>
-        </div>
-    `).join('');
-    
-    document.getElementById('dashUsers').innerText = users.length;
-}
-
-function renderUsersCards() {
-    let container = document.getElementById('usersCardsContainer');
-    if (!container) return;
-    
-    if (users.length === 0) {
-        container.innerHTML = "<div class='text-center text-gray-400 py-10'>هیچ پرسنلی ثبت نشده است</div>";
-        return;
-    }
-    
-    container.innerHTML = users.map(u => `
-        <div class="user-card">
-            <div class="flex">
-                <div class="avatar">${getInitial(u.username)}</div>
-                <div>
-                    <div class="font-bold">${escapeHtml(u.username)}</div>
-                    <div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} جلسه</div>
-                </div>
+            <div class="flex mt-3">
+                <button onclick="openEditUserModal(${u.id})" class="btn-primary flex-1" style="background:#3b82f6;">✏️ ویرایش</button>
+                <button onclick="deleteUser(${u.id})" class="btn-danger flex-1">🗑️ حذف</button>
             </div>
-            <button onclick="selectUserForMeeting(${u.id})" class="btn-primary w-full mt-2">📅 ثبت جلسه</button>
         </div>
     `).join('');
-    
-    document.getElementById('dashMeetings').innerText = meetings.length;
-    document.getElementById('dashTypes').innerText = new Set(meetings.map(m => m.type)).size;
-    let avg = meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0;
-    document.getElementById('dashAvg').innerText = avg + " دقیقه";
 }
 
 function renderUserSelect() {
@@ -434,65 +636,19 @@ function renderUserSelect() {
     }
 }
 
-function renderTasks() {
-    let tasksDiv = document.getElementById('tasksListContainer');
-    let remindersDiv = document.getElementById('remindersListContainer');
-    if (!tasksDiv) return;
-    
-    let taskList = tasks.filter(t => t.type === 'task');
-    let reminderList = tasks.filter(t => t.type === 'reminder');
-    
-    tasksDiv.innerHTML = taskList.length ? taskList.map(t => `
-        <div class="user-card mb-2">
-            <div class="flex-between">
-                <div><div class="font-bold">✅ ${escapeHtml(t.title)}</div><div class="text-xs text-gray-500">${t.date} ${t.time}</div></div>
-                <button onclick="deleteTask(${t.id})" class="text-red-500">🗑️</button>
-            </div>
-        </div>
-    `).join('') : '<div class="text-center text-gray-400 py-5">وظیفه‌ای وجود ندارد</div>';
-    
-    remindersDiv.innerHTML = reminderList.length ? reminderList.map(r => `
-        <div class="user-card mb-2">
-            <div><div class="font-bold">⏰ ${escapeHtml(r.title)}</div><div class="text-xs text-gray-500">${r.date} ${r.time}</div></div>
-        </div>
-    `).join('') : '<div class="text-center text-gray-400 py-5">یادآوری‌ای وجود ندارد</div>';
-}
-
 // =====================================================
-// توابع CRUD
+// مدیریت جلسات
 // =====================================================
-function saveNewUser() {
-    let username = document.getElementById('newUsername').value.trim();
-    if (!username) { showToast("لطفا نام را وارد کنید!"); return; }
-    if (users.some(u => u.username === username)) { showToast("این نام قبلا ثبت شده است!"); return; }
-    
-    users.push({ id: Date.now(), username: username, email: "" });
-    closeAddUserModal();
-    renderUsersList();
-    renderUserSelect();
-    showToast(`✅ پرسنل "${username}" اضافه شد`);
-}
-
-function deleteUser(id) {
-    if (!confirm("حذف شود؟")) return;
-    users = users.filter(u => u.id !== id);
-    meetings = meetings.filter(m => m.userId !== id);
-    renderUsersList();
-    renderUsersCards();
-    renderUserSelect();
-    showToast("حذف شد");
-}
-
-function addMeeting() {
+async function addMeeting() {
     let userId = document.getElementById('meetingUserSelect').value;
-    if (!userId) { showToast("پرسنل را انتخاب کنید!"); return; }
+    if (!userId) { showToast("لطفا پرسنل را انتخاب کنید!"); return; }
     
     let dateTime = document.getElementById('meetingDateTime').value;
     let duration = document.getElementById('meetingDuration').value;
     let type = document.getElementById('meetingType').value;
     let mom = document.getElementById('meetingMom').value.trim() || "بدون صورتجلسه";
     
-    if (!dateTime || !duration) { showToast("تاریخ و زمان را وارد کنید!"); return; }
+    if (!dateTime || !duration) { showToast("لطفا تاریخ و زمان را وارد کنید!"); return; }
     
     let [date, time] = dateTime.split('T');
     let user = users.find(u => u.id == userId);
@@ -509,21 +665,179 @@ function addMeeting() {
         mom: mom
     });
     
+    await syncMeetings();
     document.getElementById('meetingDateTime').value = '';
     document.getElementById('meetingDuration').value = '';
     document.getElementById('meetingMom').value = '';
     
     renderUsersCards();
-    showToast(`جلسه برای ${user.username} ثبت شد`);
+    updateDashboardAndCharts();
+    updateCounts();
+    showToast(`✅ جلسه برای ${user.username} ثبت شد`);
 }
 
-function selectUserForMeeting(id) {
-    document.getElementById('meetingUserSelect').value = id;
+function selectUserForMeeting(userId) {
+    document.getElementById('meetingUserSelect').value = userId;
     document.getElementById('meetingDateTime').focus();
-    showToast("اطلاعات جلسه را وارد کنید");
+    showToast("اطلاعات جلسه را وارد کنید و روی ذخیره کلیک کنید");
 }
 
-function addTaskOrReminder() {
+function renderUsersCards() {
+    let container = document.getElementById('usersCardsContainer');
+    if (!container) return;
+    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>هیچ پرسنلی ثبت نشده است</div>"; return; }
+    
+    container.innerHTML = users.map(u => `
+        <div class="user-card">
+            <div class="flex">
+                <div class="avatar">${getInitial(u.username)}</div>
+                <div>
+                    <div class="font-bold">${escapeHtml(u.username)}</div>
+                    <div class="text-sm text-gray">${meetings.filter(m => m.userId === u.id).length} جلسه</div>
+                </div>
+            </div>
+            <div class="flex mt-3">
+                <button onclick="selectUserForMeeting(${u.id})" class="btn-primary flex-1">📅 ثبت جلسه</button>
+                <button onclick="showUserDetails(${u.id})" class="btn-primary flex-1" style="background:#3b82f6;">📋 جزئیات</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showUserDetails(userId) {
+    let user = users.find(u => u.id === userId);
+    let userMeetings = meetings.filter(m => m.userId === userId);
+    document.getElementById('modalTitle').innerHTML = `📅 جلسات ${escapeHtml(user.username)} (${userMeetings.length})`;
+    
+    if (userMeetings.length === 0) {
+        document.getElementById('modalBody').innerHTML = `<div class="text-center text-gray-400 py-6">هیچ جلسه‌ای ثبت نشده است</div>`;
+    } else {
+        let meetingsHtml = '<div style="max-height: 400px; overflow-y: auto;">';
+        for (let m of userMeetings) {
+            meetingsHtml += `
+                <div style="border-bottom: 1px solid #e5e7eb; padding: 12px; margin-bottom: 8px;">
+                    <div class="flex-between">
+                        <div>
+                            <div class="font-bold">${m.date} - ${m.time}</div>
+                            <div class="text-sm text-gray">${m.duration} دقیقه</div>
+                            <div><span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">${m.type}</span></div>
+                        </div>
+                        <button onclick="deleteMeeting(${m.id})" class="text-red-500"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-2 bg-gray-50 p-2 rounded-lg">📝 ${escapeHtml(m.mom.substring(0, 100))}${m.mom.length > 100 ? '...' : ''}</div>
+                </div>
+            `;
+        }
+        meetingsHtml += '</div>';
+        document.getElementById('modalBody').innerHTML = meetingsHtml;
+    }
+    document.getElementById('userModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('userModal').style.display = 'none';
+}
+
+async function deleteMeeting(meetingId) {
+    if (confirm("آیا از حذف این جلسه مطمئن هستید؟")) {
+        meetings = meetings.filter(m => m.id !== meetingId);
+        await syncMeetings();
+        renderUsersCards();
+        updateDashboardAndCharts();
+        updateCounts();
+        showToast("جلسه حذف شد");
+        closeModal();
+    }
+}
+
+// =====================================================
+// جلسه گروهی
+// =====================================================
+function openGroupMeetingModal() {
+    if (users.length === 0) { showToast("لطفا ابتدا پرسنل اضافه کنید!"); return; }
+    
+    let html = `
+        <h3 class="text-xl font-bold mb-4">👥 تنظیم جلسه گروهی</h3>
+        <select id="groupType" class="form-input">
+            <option value="Team">👥 تیمی</option>
+            <option value="Individual">👤 انفرادی</option>
+            <option value="Disciplinary">⚖️ تنبیهی</option>
+            <option value="CLF">📊 CLF</option>
+            <option value="Project Review">📁 بازبینی پروژه</option>
+        </select>
+        <input type="datetime-local" id="groupDateTime" class="form-input">
+        <input type="number" id="groupDuration" placeholder="مدت زمان (دقیقه)" class="form-input">
+        <div class="border rounded-lg p-2 max-h-48 overflow-y-auto my-3">
+            <div class="flex-between mb-2"><span>انتخاب پرسنل:</span><button onclick="toggleSelectAllUsers()" class="text-blue-600 text-sm">انتخاب همه</button></div>
+            ${users.map(u => `<label class="flex items-center gap-2 p-2"><input type="checkbox" value="${u.id}" class="userCheck"> <span>${escapeHtml(u.username)}</span></label>`).join('')}
+        </div>
+        <textarea id="groupMom" rows="3" placeholder="صورتجلسه..." class="form-input"></textarea>
+        <button onclick="saveGroupMeeting()" class="btn-primary w-full">💾 ثبت جلسه گروهی</button>
+        <button onclick="closeGroupMeetingModal()" class="btn-secondary w-full mt-2">انصراف</button>
+    `;
+    document.getElementById('groupMeetingModalBody').innerHTML = html;
+    document.getElementById('groupMeetingModal').style.display = 'flex';
+}
+
+function toggleSelectAllUsers() {
+    let checks = document.querySelectorAll('#groupMeetingModalBody .userCheck');
+    let allChecked = Array.from(checks).every(c => c.checked);
+    checks.forEach(c => c.checked = !allChecked);
+}
+
+async function saveGroupMeeting() {
+    let checks = document.querySelectorAll('#groupMeetingModalBody .userCheck:checked');
+    if (checks.length === 0) { showToast("لطفا حداقل یک نفر را انتخاب کنید!"); return; }
+    
+    let dateTime = document.getElementById('groupDateTime').value;
+    let duration = document.getElementById('groupDuration').value;
+    let type = document.getElementById('groupType').value;
+    let mom = document.getElementById('groupMom').value.trim() || "بدون صورتجلسه";
+    
+    if (!dateTime || !duration) { showToast("لطفا تاریخ و زمان را مشخص کنید!"); return; }
+    
+    let [date, time] = dateTime.split('T');
+    let added = 0;
+    
+    for (let cb of checks) {
+        let user = users.find(u => u.id == parseInt(cb.value));
+        if (user) {
+            meetings.push({
+                id: Date.now() + Math.random(),
+                userId: user.id,
+                userName: user.username,
+                date: date,
+                time: time.substring(0, 5),
+                duration: parseInt(duration),
+                type: type,
+                mom: mom
+            });
+            added++;
+        }
+    }
+    
+    await syncMeetings();
+    closeGroupMeetingModal();
+    renderUsersCards();
+    updateDashboardAndCharts();
+    updateCounts();
+    showToast(`✅ جلسه گروهی ${type} برای ${added} نفر ثبت شد`);
+}
+
+function closeGroupMeetingModal() {
+    document.getElementById('groupMeetingModal').style.display = 'none';
+}
+
+// =====================================================
+// وظایف و یادآوری‌ها
+// =====================================================
+function toggleTaskFields() {
+    let type = document.getElementById('itemType').value;
+    document.getElementById('taskPriority').style.display = type === 'task' ? 'block' : 'none';
+    document.getElementById('reminderDesc').style.display = type === 'reminder' ? 'block' : 'none';
+}
+
+async function addTaskOrReminder() {
     let type = document.getElementById('itemType').value;
     let title = document.getElementById('itemTitle').value.trim();
     let date = document.getElementById('itemDate').value;
@@ -539,110 +853,222 @@ function addTaskOrReminder() {
         tasks.push({ id: Date.now(), type: 'reminder', title, date, time, description: desc, completed: false });
     }
     
-    renderTasks();
+    await syncTasks();
+    renderTasksAndReminders();
+    
     document.getElementById('itemTitle').value = '';
     document.getElementById('itemDate').value = '';
     document.getElementById('itemTime').value = '';
     document.getElementById('reminderDesc').value = '';
-    showToast('اضافه شد');
+    showToast(`✅ ${type === 'task' ? 'وظیفه' : 'یادآوری'} اضافه شد`);
 }
 
-function deleteTask(id) {
-    if (confirm('حذف شود؟')) {
+async function deleteTask(id) {
+    if (confirm('آیا از حذف این آیتم مطمئن هستید؟')) {
         tasks = tasks.filter(t => t.id !== id);
-        renderTasks();
-        showToast('حذف شد');
+        await syncTasks();
+        renderTasksAndReminders();
+        showToast('آیتم حذف شد');
     }
 }
 
-function openGroupMeetingModal() {
-    if (users.length === 0) { showToast("ابتدا پرسنل اضافه کنید!"); return; }
+async function markTaskComplete(id) {
+    let item = tasks.find(t => t.id === id);
+    if (item) {
+        item.completed = true;
+        await syncTasks();
+        renderTasksAndReminders();
+        showToast(`✅ "${item.title}" انجام شد`);
+    }
+}
+
+function renderTasksAndReminders() {
+    let tasksDiv = document.getElementById('tasksListContainer');
+    let remindersDiv = document.getElementById('remindersListContainer');
+    if (!tasksDiv) return;
     
-    let html = `
-        <h3 class="text-xl font-bold mb-4">👥 جلسه گروهی</h3>
-        <select id="groupType" class="form-input">
-            <option value="Team">تیمی</option>
-            <option value="Individual">انفرادی</option>
-        </select>
-        <input type="datetime-local" id="groupDateTime" class="form-input">
-        <input type="number" id="groupDuration" placeholder="مدت زمان" class="form-input">
-        <div class="border rounded-lg p-2 max-h-48 overflow-y-auto my-3">
-            ${users.map(u => `<label class="flex items-center gap-2 p-2"><input type="checkbox" value="${u.id}" class="userCheck"> <span>${escapeHtml(u.username)}</span></label>`).join('')}
+    let taskList = tasks.filter(t => t.type === 'task');
+    let reminderList = tasks.filter(t => t.type === 'reminder');
+    let today = new Date().toISOString().slice(0, 10);
+    
+    document.getElementById('taskCount').innerText = taskList.length;
+    document.getElementById('reminderCount').innerText = reminderList.length;
+    
+    tasksDiv.innerHTML = taskList.length ? taskList.map(t => `
+        <div class="user-card mb-2 ${t.completed ? 'opacity-50' : ''}">
+            <div class="flex-between">
+                <div>
+                    <div class="font-bold text-sm">✅ ${escapeHtml(t.title)} ${t.date === today ? '<span class="text-red-500 text-xs">🔔 امروز</span>' : ''}</div>
+                    <div class="text-xs text-gray">${t.date} ${t.time} • ${t.priority === 'high' ? '🔴 زیاد' : (t.priority === 'medium' ? '🟡 متوسط' : '🟢 کم')}</div>
+                </div>
+                <div class="flex">
+                    ${!t.completed ? `<button onclick="markTaskComplete(${t.id})" class="text-green-500"><i class="fas fa-check-circle"></i></button>` : ''}
+                    <button onclick="deleteTask(${t.id})" class="text-red-500"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
         </div>
-        <textarea id="groupMom" rows="3" placeholder="صورتجلسه" class="form-input"></textarea>
-        <button onclick="saveGroupMeeting()" class="btn-primary w-full">ثبت جلسه</button>
-        <button onclick="closeGroupMeetingModal()" class="btn-primary w-full mt-2" style="background:#6b7280;">انصراف</button>
-    `;
+    `).join('') : '<div class="text-center text-gray-400 py-5">هیچ وظیفه‌ای وجود ندارد</div>';
     
-    document.getElementById('groupMeetingModalBody').innerHTML = html;
-    document.getElementById('groupMeetingModal').style.display = 'flex';
+    remindersDiv.innerHTML = reminderList.length ? reminderList.map(r => `
+        <div class="user-card mb-2">
+            <div class="flex-between">
+                <div>
+                    <div class="font-bold text-sm">⏰ ${escapeHtml(r.title)} ${r.date === today ? '<span class="text-red-500 text-xs">🔔 امروز</span>' : ''}</div>
+                    <div class="text-xs text-gray">${r.date} ${r.time}</div>
+                    <div class="text-xs text-gray-500 mt-1">📝 ${escapeHtml(r.description || '')}</div>
+                </div>
+                <button onclick="deleteTask(${r.id})" class="text-red-500"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+    `).join('') : '<div class="text-center text-gray-400 py-5">هیچ یادآوری وجود ندارد</div>';
 }
 
-function saveGroupMeeting() {
-    let checks = document.querySelectorAll('#groupMeetingModalBody .userCheck:checked');
-    if (checks.length === 0) { showToast("حداقل یک نفر را انتخاب کنید!"); return; }
+// =====================================================
+// آمار و چارت‌ها
+// =====================================================
+function updateCounts() {
+    document.getElementById('dashUsers') && (document.getElementById('dashUsers').innerText = users.length);
+    document.getElementById('dashMeetings') && (document.getElementById('dashMeetings').innerText = meetings.length);
+}
+
+function updateDashboardAndCharts() {
+    let uniqueTypes = new Set(meetings.map(m => m.type)).size;
+    document.getElementById('dashTypes') && (document.getElementById('dashTypes').innerText = uniqueTypes);
+    let avg = meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0;
+    document.getElementById('dashAvg') && (document.getElementById('dashAvg').innerText = avg + " دقیقه");
     
-    let dateTime = document.getElementById('groupDateTime').value;
-    let duration = document.getElementById('groupDuration').value;
-    let type = document.getElementById('groupType').value;
-    let mom = document.getElementById('groupMom').value.trim() || 'بدون صورتجلسه';
+    let typeCount = {};
+    meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
+    let labels = Object.keys(typeCount);
+    let data = Object.values(typeCount);
+    let colors = ["#10b981", "#34d399", "#6ee7b7", "#059669", "#0284c7", "#38bdf8", "#7dd3fc"];
     
-    if (!dateTime || !duration) { showToast("تاریخ و زمان را مشخص کنید!"); return; }
+    let ctx1 = document.getElementById('typeChart')?.getContext('2d');
+    let ctx2 = document.getElementById('reportChart')?.getContext('2d');
+    if (ctx1) { if (chart1) chart1.destroy(); chart1 = new Chart(ctx1, { type: 'bar', data: { labels, datasets: [{ label: 'تعداد جلسات', data, backgroundColor: colors, borderRadius: 8 }] }, options: { responsive: true } }); }
+    if (ctx2) { if (chart2) chart2.destroy(); chart2 = new Chart(ctx2, { type: 'pie', data: { labels, datasets: [{ data, backgroundColor: colors }] }, options: { responsive: true, plugins: { legend: { position: 'bottom' } } } }); }
     
-    let [date, time] = dateTime.split('T');
-    
-    for (let cb of checks) {
-        let user = users.find(u => u.id == parseInt(cb.value));
-        if (user) {
-            meetings.push({
-                id: Date.now() + Math.random(),
-                userId: user.id,
-                userName: user.username,
-                date: date,
-                time: time.substring(0, 5),
-                duration: parseInt(duration),
-                type: type,
-                mom: mom
-            });
+    let recentHtml = meetings.slice(0, 5).map(m => `<div class="border-b pb-1 flex gap-2"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1.5"></i><span>${m.date} ${m.time} - ${m.userName}: ${m.type}</span></div>`).join('');
+    document.getElementById('recentLogs') && (document.getElementById('recentLogs').innerHTML = recentHtml || "<div class='text-gray-400'>هیچ جلسه اخیری وجود ندارد</div>");
+}
+
+// =====================================================
+// اکسل و JSON
+// =====================================================
+async function handleExcelUpload(input) {
+    let file = input.files[0];
+    if (!file) return;
+    let reader = new FileReader();
+    reader.onload = async function(e) {
+        let data = new Uint8Array(e.target.result);
+        let workbook = XLSX.read(data, { type: 'array' });
+        let sheet = workbook.Sheets[workbook.SheetNames[0]];
+        let rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        let added = 0;
+        for (let i = 0; i < rows.length; i++) {
+            let row = rows[i];
+            if (!row || row.length === 0) continue;
+            let username = row[0] ? String(row[0]).trim() : "";
+            if (i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
+            if (username && !users.some(u => u.username === username) && users.length < 100) {
+                users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
+                added++;
+            }
         }
-    }
-    
-    closeGroupMeetingModal();
-    renderUsersCards();
-    showToast(`جلسه گروهی برای ${checks.length} نفر ثبت شد`);
+        if (added > 0) { await syncUsers(); renderUsersList(); renderUserSelect(); updateCounts(); showToast(`${added} کاربر جدید اضافه شد`); }
+        else showToast("کاربر جدیدی یافت نشد", "error");
+        input.value = '';
+    };
+    reader.readAsArrayBuffer(file);
 }
 
-function closeGroupMeetingModal() {
-    document.getElementById('groupMeetingModal').style.display = 'none';
+function exportMeetingsReport() {
+    let report = meetings.map(m => ({ پرسنل: m.userName, تاریخ: m.date, زمان: m.time, مدت: m.duration, نوع: m.type, صورتجلسه: m.mom }));
+    downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
+    showToast("گزارش جلسات صادر شد");
 }
 
-function openAddUserModal() {
-    document.getElementById('addUserModal').style.display = 'flex';
-    document.getElementById('newUsername').value = '';
+function exportUsersReport() {
+    let report = users.map(u => ({ نام: u.username, ایمیل: u.email, تعداد_جلسات: meetings.filter(m => m.userId === u.id).length }));
+    downloadFile(JSON.stringify(report, null, 2), `users_${new Date().toISOString().slice(0,19)}.json`);
+    showToast("گزارش پرسنل صادر شد");
 }
 
-function closeAddUserModal() {
-    document.getElementById('addUserModal').style.display = 'none';
+function exportTasksReport() {
+    let report = tasks.map(t => ({ نوع: t.type, عنوان: t.title, تاریخ: t.date, زمان: t.time, وضعیت: t.completed ? "انجام شده" : "انجام نشده" }));
+    downloadFile(JSON.stringify(report, null, 2), `tasks_${new Date().toISOString().slice(0,19)}.json`);
+    showToast("گزارش وظایف صادر شد");
 }
 
-function exportData() {
-    let data = { users, meetings, tasks, exportDate: new Date().toISOString() };
-    let blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+function exportFullReport() {
+    let typeCount = {};
+    meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
+    let report = { تاریخ_خروجی: new Date().toISOString(), خلاصه: { کل_پرسنل: users.length, کل_جلسات: meetings.length, کل_وظایف: tasks.length, توزیع_نوع_جلسه: typeCount }, پرسنل: users, جلسات: meetings, وظایف: tasks };
+    downloadFile(JSON.stringify(report, null, 2), `full_report_${new Date().toISOString().slice(0,19)}.json`);
+    showToast("گزارش کامل صادر شد");
+}
+
+function exportStatistics() {
+    let stats = { تاریخ: new Date().toISOString(), پرسنل: users.length, جلسات: meetings.length, میانگین_مدت: meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0, وظایف_انجام_شده: tasks.filter(t => t.completed).length };
+    downloadFile(JSON.stringify(stats, null, 2), `statistics_${new Date().toISOString().slice(0,19)}.json`);
+    showToast("آمار صادر شد");
+}
+
+function exportFullJSON() {
+    let exportData = { users, meetings, tasks, exportDate: new Date().toISOString() };
+    downloadFile(JSON.stringify(exportData, null, 2), `meeting_manager_backup_${new Date().toISOString().slice(0,19)}.json`);
+    showToast("پشتیبان کامل صادر شد");
+}
+
+function importJSON(input) {
+    let file = input.files[0];
+    if (!file) return;
+    let reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            let imported = JSON.parse(e.target.result);
+            if (imported.users) users = imported.users;
+            if (imported.meetings) meetings = imported.meetings;
+            if (imported.tasks) tasks = imported.tasks;
+            await syncUsers(); await syncMeetings(); await syncTasks();
+            renderAll();
+            showToast("داده‌ها با موفقیت وارد شدند");
+        } catch(err) { showToast("فایل JSON نامعتبر است!", "error"); }
+        input.value = '';
+    };
+    reader.readAsText(file);
+}
+
+function downloadFile(content, filename) {
+    let blob = new Blob([content], { type: "application/json" });
     let a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'backup.json';
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
-    showToast('خروجی گرفته شد');
+}
+
+function renderAll() {
+    renderUserSelect();
+    renderUsersList();
+    renderUsersCards();
+    renderTasksAndReminders();
+    updateDashboardAndCharts();
+    updateCounts();
 }
 
 // =====================================================
 // شروع برنامه
 // =====================================================
-renderUserSelect();
-renderUsersList();
-renderUsersCards();
-renderTasks();
+async function init() {
+    toggleTaskFields();
+    await loadUsers();
+    await loadMeetings();
+    await loadTasks();
+    renderAll();
+}
+
+init();
 </script>
 </body>
 </html>

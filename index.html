@@ -39,6 +39,7 @@
             transition: all 0.2s ease; 
             color: #065f46;
             font-weight: 500;
+            cursor: pointer;
         }
         
         .sidebar-link i {
@@ -249,6 +250,7 @@
             font-size: 11px;
             border-radius: 8px;
             transition: all 0.15s;
+            cursor: pointer;
         }
         
         .user-photo {
@@ -279,6 +281,18 @@
             font-weight: bold;
             border: 3px solid white;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .tab-content {
+            display: block;
+        }
+        
+        .tab-content.hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -704,19 +718,60 @@ async function syncTasks() {
 
 // ========== منوها ==========
 function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
-    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('sidebar-item-active'));
-    let activeLink = document.querySelector(`.sidebar-link[data-tab="${tabId}"]`);
-    if(activeLink) activeLink.classList.add('sidebar-item-active');
-    if(tabId === 'dashboard' || tabId === 'reports') updateDashboardAndCharts();
-    if(tabId === 'meetings') renderUsersCards();
-    if(tabId === 'tasks') renderTasksAndReminders();
-    if(tabId === 'users') renderUsersList();
+    // مخفی کردن تمام تب‌ها
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // نمایش تب انتخاب شده
+    const selectedTab = document.getElementById(`${tabId}-tab`);
+    if (selectedTab) {
+        selectedTab.classList.remove('hidden');
+    } else {
+        console.error(`Tab with id ${tabId}-tab not found`);
+        return;
+    }
+    
+    // حذف کلاس active از تمام لینک‌های سایدبار
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+        link.classList.remove('sidebar-item-active');
+    });
+    
+    // اضافه کردن کلاس active به لینک انتخاب شده
+    const activeLink = document.querySelector(`.sidebar-link[data-tab="${tabId}"]`);
+    if (activeLink) {
+        activeLink.classList.add('sidebar-item-active');
+    }
+    
+    // آپدیت محتوای تب‌ها بر اساس نیاز
+    if (tabId === 'dashboard' || tabId === 'reports') {
+        updateDashboardAndCharts();
+    }
+    if (tabId === 'meetings') {
+        renderUsersCards();
+    }
+    if (tabId === 'tasks') {
+        renderTasksAndReminders();
+    }
+    if (tabId === 'users') {
+        renderUsersList();
+    }
 }
 
-document.querySelectorAll('.sidebar-link').forEach(link => {
-    link.addEventListener('click', (e) => { e.preventDefault(); switchTab(link.getAttribute('data-tab')); });
+// اضافه کردن event listener به تمام لینک‌های سایدبار
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+        link.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            const tabId = link.getAttribute('data-tab');
+            if (tabId) {
+                switchTab(tabId);
+            }
+        });
+    });
+    
+    // فعال کردن تب dashboard به صورت پیش‌فرض
+    switchTab('dashboard');
 });
 
 // ========== رندرها ==========
@@ -971,6 +1026,7 @@ function openAddUserModal() {
     document.getElementById("newUsername").value = "";
 }
 function closeAddUserModal() { document.getElementById("addUserModal").style.display = "none"; }
+function closeAddUserModalOnOutside(event) { if(event.target === document.getElementById("addUserModal")) closeAddUserModal(); }
 
 function openScheduleModal(userId) {
     let user = users.find(u => u.id === userId);
@@ -1016,7 +1072,10 @@ async function saveScheduledMeeting(userId) {
 }
 
 function closeScheduleModal() { document.getElementById("scheduleModal").style.display = "none"; }
+function closeScheduleModalOnOutside(event) { if(event.target === document.getElementById("scheduleModal")) closeScheduleModal(); }
+
 function closeModal() { document.getElementById("userModal").style.display = "none"; }
+function closeModalOnOutside(event) { if(event.target === document.getElementById("userModal")) closeModal(); }
 
 function openEditUserModal(userId) {
     let user = users.find(u => u.id === userId);
@@ -1052,6 +1111,7 @@ async function saveEditedUser() {
 }
 
 function closeEditUserModal() { document.getElementById("editUserModal").style.display = "none"; }
+function closeEditUserModalOnOutside(event) { if(event.target === document.getElementById("editUserModal")) closeEditUserModal(); }
 
 function showUserDetails(userId) {
     let user = users.find(u => u.id === userId);
@@ -1099,7 +1159,8 @@ function openGroupMeetingModal() {
         <div class="space-y-3">
             <div><select id="groupMeetingType" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
                 <option value="Team">👥 تیمی (Team)</option><option value="Individual">👤 انفرادی (Individual)</option>
-                <option value="Disciplinary">⚖️ تنبیهی</option><option value="CLF">📊 CLF</option>
+                <option value="Disciplinary">⚖️ تنبیهی</option>
+                <option value="CLF">📊 CLF</option>
                 <option value="Project Review">📁 بازبینی پروژه</option>
                 <option value="Strategic">🎯 استراتژیک</option><option value="One on One">🤝 یک به یک</option>
             </select></div>
@@ -1286,7 +1347,6 @@ async function init() {
     await loadMeetings();
     await loadTasks();
     renderAll();
-    switchTab('dashboard');
     toggleTaskReminderFields();
 }
 

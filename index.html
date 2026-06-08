@@ -477,7 +477,7 @@ async function testCheckPhoto() {
     }
     
     const fileName = username.replace(/\s/g, '').toLowerCase();
-    const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/${fileName}.png`;
+    const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/User-photos/${fileName}.png`;
     
     let html = `
         <strong>🔍 بررسی عکس برای کاربر "${username}":</strong><br><br>
@@ -542,7 +542,7 @@ async function testGetAllPhotos() {
             let html = '<strong>📂 لیست عکس‌های موجود در Storage:</strong><br><br>';
             html += `<div style="display: flex; flex-wrap: wrap; gap: 15px;">`;
             files.forEach(file => {
-                const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/${file.name}`;
+                const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/User-photos/${file.name}`;
                 const userName = file.name.replace('.png', '').replace('.jpg', '');
                 html += `
                     <div style="text-align: center; width: 100px;">

@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تست کامل Supabase - همه جداول</title>
+    <title>تست کامل Supabase - نسخه اصلاح شده</title>
     <style>
-        body { font-family: Tahoma; max-width: 800px; margin: 30px auto; padding: 20px; background: linear-gradient(135deg, #e0f2fe, #dcfce7); }
+        body { font-family: Tahoma; max-width: 900px; margin: 30px auto; padding: 20px; background: linear-gradient(135deg, #e0f2fe, #dcfce7); }
         .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         button { background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; margin: 5px; }
         button:hover { background: #047857; }
-        .result { background: #f0fdf4; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 13px; max-height: 300px; overflow-y: auto; }
+        .result { background: #f0fdf4; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 13px; max-height: 400px; overflow-y: auto; }
         .error { background: #fee2e2; color: #dc2626; }
         .success { background: #d1fae5; color: #065f46; }
         input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         h3 { color: #065f46; margin-bottom: 10px; border-bottom: 2px solid #a7f3d0; padding-bottom: 8px; }
         .flex { display: flex; gap: 10px; flex-wrap: wrap; }
-        .table-name { background: #e6f7ec; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
-        hr { margin: 15px 0; }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        .note { background: #fef3c7; padding: 10px; border-radius: 10px; font-size: 12px; margin-top: 10px; }
+        code { background: #f0fdf4; padding: 2px 6px; border-radius: 5px; font-family: monospace; }
     </style>
 </head>
 <body>
 
-<h2 style="text-align: center; color: #065f46;">📡 تست کامل Supabase</h2>
+<h2 style="text-align: center; color: #065f46;">📡 تست کامل Supabase (نسخه اصلاح شده)</h2>
 
 <!-- ========== بخش USERS ========== -->
 <div class="card">
@@ -34,13 +35,16 @@
     <div id="usersResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
-<!-- ========== بخش MEETINGS ========== -->
+<!-- ========== بخش MEETINGS (اصلاح شده) ========== -->
 <div class="card">
     <h3>📅 2. جدول MEETINGS (جلسات)</h3>
     <div class="flex">
         <button onclick="testReadMeetings()">📖 خواندن جلسات</button>
         <button onclick="testAddMeeting()">➕ افزودن جلسه نمونه</button>
         <button onclick="testDeleteLastMeeting()">🗑️ حذف آخرین جلسه</button>
+    </div>
+    <div class="note">
+        ⚠️ توجه: جدول meetings باید دارای ستون‌های: id, user_id, user_name, date, time, duration, type, mom
     </div>
     <div id="meetingsResult" class="result">برای تست کلیک کنید...</div>
 </div>
@@ -60,12 +64,17 @@
 <!-- ========== بخش STORAGE (عکس) ========== -->
 <div class="card">
     <h3>🖼️ 4. تست Storage (عکس کاربران)</h3>
-    <div>
-        <input type="text" id="photoUsername" placeholder="نام کاربر (مثال: احمد)" style="width: 70%; display: inline-block;">
-        <button onclick="testGetPhotoUrl()">🔍 بررسی آدرس عکس</button>
+    <div class="flex-row">
+        <input type="text" id="photoUsername" placeholder="نام کاربر (مثال: احمد)" style="flex:1;">
+        <button onclick="testCheckPhoto()">🔍 بررسی وجود عکس</button>
+        <button onclick="testGetAllPhotos()">📂 لیست همه عکس‌ها</button>
     </div>
     <div id="storageResult" class="result">برای تست کلیک کنید...</div>
-    <div class="table-name" style="margin-top: 10px;">💡 نکته: عکس‌ها باید در مسیر <code>user-photos/نام کاربر.png</code> آپلود شوند</div>
+    <div class="note">
+        📁 <strong>مسیر صحیح Storage:</strong><br>
+        باکت: <code>user-photos</code><br>
+        آدرس عکس: <code>${SUPABASE_URL}/storage/v1/object/public/user-photos/[نام کاربر].png</code>
+    </div>
 </div>
 
 <script>
@@ -73,7 +82,6 @@
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-// هدرهای مشترک برای درخواست‌ها
 const headers = {
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -107,7 +115,7 @@ async function testReadUsers() {
         } else {
             let html = '<strong>✅ لیست کاربران در Supabase:</strong><br><br>';
             data.forEach(user => {
-                html += `<div style="border-bottom:1px solid #e5e7eb; padding:5px 0;">
+                html += `<div style="border-bottom:1px solid #e5e7eb; padding:8px 0;">
                     🧑 <strong>${user.username}</strong><br>
                     📧 ${user.email || 'بدون ایمیل'} | 🆔 ID: ${user.id}
                 </div>`;
@@ -139,7 +147,10 @@ async function testAddUser() {
             body: JSON.stringify(newUser)
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
         
         showResult('usersResult', `✅ کاربر "${newUsername}" با موفقیت اضافه شد!`, false);
         setTimeout(() => testReadUsers(), 500);
@@ -185,7 +196,7 @@ async function testDeleteLastUser() {
     }
 }
 
-// ========== 2. تست MEETINGS ==========
+// ========== 2. تست MEETINGS (اصلاح شده) ==========
 async function testReadMeetings() {
     const resultDiv = document.getElementById('meetingsResult');
     resultDiv.innerHTML = 'در حال خواندن جلسات...';
@@ -201,22 +212,22 @@ async function testReadMeetings() {
         const data = await response.json();
         
         if (data.length === 0) {
-            showResult('meetingsResult', '📭 هیچ جلسه‌ای یافت نشد.', false);
+            showResult('meetingsResult', '📭 هیچ جلسه‌ای یافت نشد. ابتدا یک جلسه اضافه کنید.', false);
         } else {
             let html = '<strong>✅ لیست جلسات در Supabase:</strong><br><br>';
             data.forEach(meeting => {
-                html += `<div style="border-bottom:1px solid #e5e7eb; padding:5px 0;">
+                html += `<div style="border-bottom:1px solid #e5e7eb; padding:8px 0;">
                     📅 <strong>${meeting.date || 'بدون تاریخ'}</strong> - ${meeting.time || 'بدون زمان'} <br>
-                    👤 ${meeting.userName || `کاربر ID: ${meeting.userId}`} <br>
+                    👤 ${meeting.user_name || `کاربر ID: ${meeting.user_id}`} <br>
                     ⏱️ ${meeting.duration} دقیقه | 🏷️ ${meeting.type} <br>
-                    📝 ${(meeting.mom || '').substring(0, 50)}${(meeting.mom || '').length > 50 ? '...' : ''}
+                    📝 ${(meeting.mom || '').substring(0, 80)}${(meeting.mom || '').length > 80 ? '...' : ''}
                 </div>`;
             });
             html += `<br><strong>📊 تعداد کل:</strong> ${data.length} جلسه`;
             showResult('meetingsResult', html, false);
         }
     } catch(error) {
-        showResult('meetingsResult', `❌ خطا: ${error.message}`, true);
+        showResult('meetingsResult', `❌ خطا در خواندن: ${error.message}`, true);
     }
 }
 
@@ -228,10 +239,25 @@ async function testAddMeeting() {
     resultDiv.innerHTML = 'در حال افزودن جلسه...';
     
     try {
+        // ابتدا یک کاربر دریافت می‌کنیم
+        const usersResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username&limit=1`, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        if (!usersResponse.ok) throw new Error('خطا در دریافت کاربران');
+        
+        const users = await usersResponse.json();
+        
+        if (users.length === 0) {
+            showResult('meetingsResult', '❌ ابتدا باید یک کاربر اضافه کنید!', true);
+            return;
+        }
+        
         const newMeeting = {
             id: Date.now(),
-            userId: 1,
-            userName: "کاربر تست",
+            user_id: users[0].id,
+            user_name: users[0].username,
             date: today,
             time: now,
             duration: 45,
@@ -239,13 +265,19 @@ async function testAddMeeting() {
             mom: "این یک جلسه تستی است که از طریق API اضافه شده است."
         };
         
+        console.log('در حال ارسال:', newMeeting);
+        
         const response = await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(newMeeting)
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('خطای سرور:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
         
         showResult('meetingsResult', `✅ جلسه تستی با موفقیت اضافه شد!`, false);
         setTimeout(() => testReadMeetings(), 500);
@@ -310,11 +342,11 @@ async function testReadTasks() {
             let html = '<strong>✅ لیست وظایف و یادآوری‌ها در Supabase:</strong><br><br>';
             data.forEach(item => {
                 const icon = item.type === 'task' ? '✅' : '⏰';
-                html += `<div style="border-bottom:1px solid #e5e7eb; padding:5px 0;">
+                html += `<div style="border-bottom:1px solid #e5e7eb; padding:8px 0;">
                     ${icon} <strong>${item.title}</strong> (${item.type === 'task' ? 'وظیفه' : 'یادآوری'})<br>
                     📅 ${item.date || 'بدون تاریخ'} | ⏰ ${item.time || 'بدون زمان'}<br>
                     ${item.priority ? `🎯 اولویت: ${item.priority}<br>` : ''}
-                    ${item.description ? `📝 ${item.description.substring(0, 50)}${item.description.length > 50 ? '...' : ''}<br>` : ''}
+                    ${item.description ? `📝 ${item.description.substring(0, 80)}${item.description.length > 80 ? '...' : ''}<br>` : ''}
                     🏷️ وضعیت: ${item.completed ? '✓ انجام شده' : '○ انجام نشده'}
                 </div>`;
             });
@@ -350,7 +382,10 @@ async function testAddTask() {
             body: JSON.stringify(newTask)
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
         
         showResult('tasksResult', `✅ وظیفه "${newTask.title}" با موفقیت اضافه شد!`, false);
         setTimeout(() => testReadTasks(), 500);
@@ -384,7 +419,10 @@ async function testAddReminder() {
             body: JSON.stringify(newReminder)
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
         
         showResult('tasksResult', `✅ یادآوری "${newReminder.title}" با موفقیت اضافه شد!`, false);
         setTimeout(() => testReadTasks(), 500);
@@ -429,7 +467,7 @@ async function testDeleteLastTask() {
 }
 
 // ========== 4. تست Storage (عکس) ==========
-function testGetPhotoUrl() {
+async function testCheckPhoto() {
     const username = document.getElementById('photoUsername').value.trim();
     const resultDiv = document.getElementById('storageResult');
     
@@ -442,34 +480,85 @@ function testGetPhotoUrl() {
     const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/${fileName}.png`;
     
     let html = `
-        <strong>🔍 آدرس عکس برای کاربر "${username}":</strong><br><br>
+        <strong>🔍 بررسی عکس برای کاربر "${username}":</strong><br><br>
         📁 نام فایل: ${fileName}.png<br>
         🔗 آدرس کامل: <a href="${photoUrl}" target="_blank">${photoUrl}</a><br><br>
-        <div class="table-name" style="background: #fef3c7;">
-        💡 نکات مهم:<br>
-        • عکس باید با نام ${fileName}.png در باکت <strong>user-photos</strong> آپلود شود<br>
-        • باکت باید عمومی (Public) باشد<br>
-        • اگر عکس وجود داشته باشد، در لینک بالا قابل مشاهده است
-        </div>
     `;
     
-    // تست وجود عکس با fetch
-    fetch(photoUrl, { method: 'HEAD' })
-        .then(response => {
-            if (response.ok) {
-                html = `<strong>✅ عکس یافت شد!</strong><br><br>` + html;
-                html += `<br><div class="table-name" style="background: #d1fae5;">✅ عکس ${fileName}.png در Storage وجود دارد</div>`;
-            } else {
-                html = `<strong>⚠️ عکس یافت نشد!</strong><br><br>` + html;
-                html += `<br><div class="table-name" style="background: #fee2e2;">❌ عکس ${fileName}.png در Storage وجود ندارد. لطفاً عکس را آپلود کنید.</div>`;
-            }
-            showResult('storageResult', html, false);
-        })
-        .catch(() => {
-            html = `<strong>⚠️ عکس یافت نشد!</strong><br><br>` + html;
-            html += `<br><div class="table-name" style="background: #fee2e2;">❌ عکس ${fileName}.png در Storage وجود ندارد یا باکت عمومی نیست.</div>`;
-            showResult('storageResult', html, false);
+    try {
+        const response = await fetch(photoUrl, { method: 'HEAD' });
+        
+        if (response.ok) {
+            html += `<div style="background: #d1fae5; padding: 10px; border-radius: 8px;">
+                ✅ <strong>عکس یافت شد!</strong><br>
+                🖼️ عکس ${fileName}.png در Storage وجود دارد.<br>
+                📏 اندازه: ${response.headers.get('content-length') ? Math.round(response.headers.get('content-length') / 1024) + ' KB' : 'نامشخص'}
+            </div>`;
+            html += `<br><img src="${photoUrl}" style="max-width: 150px; border-radius: 50%; border: 3px solid #10b981;" onerror="this.style.display='none'">`;
+        } else {
+            html += `<div style="background: #fee2e2; padding: 10px; border-radius: 8px;">
+                ❌ <strong>عکس یافت نشد!</strong><br>
+                عکس ${fileName}.png در Storage وجود ندارد.<br>
+                لطفاً عکس را در مسیر <code>user-photos/${fileName}.png</code> آپلود کنید.
+            </div>`;
+        }
+        showResult('storageResult', html, false);
+    } catch(error) {
+        html += `<div style="background: #fee2e2; padding: 10px; border-radius: 8px;">
+            ❌ خطا در بررسی عکس: ${error.message}
+        </div>`;
+        showResult('storageResult', html, true);
+    }
+}
+
+async function testGetAllPhotos() {
+    const resultDiv = document.getElementById('storageResult');
+    resultDiv.innerHTML = 'در حال دریافت لیست عکس‌ها...';
+    
+    try {
+        // این API نیاز به تنظیمات خاص دارد، از روش مستقیم استفاده می‌کنیم
+        const bucketName = 'user-photos';
+        const listUrl = `${SUPABASE_URL}/storage/v1/object/list/${bucketName}`;
+        
+        const response = await fetch(listUrl, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prefix: '' })
         });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const files = await response.json();
+        
+        if (files.length === 0) {
+            showResult('storageResult', '📭 هیچ عکسی در پوشه user-photos وجود ندارد.', false);
+        } else {
+            let html = '<strong>📂 لیست عکس‌های موجود در Storage:</strong><br><br>';
+            html += `<div style="display: flex; flex-wrap: wrap; gap: 15px;">`;
+            files.forEach(file => {
+                const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/${file.name}`;
+                const userName = file.name.replace('.png', '').replace('.jpg', '');
+                html += `
+                    <div style="text-align: center; width: 100px;">
+                        <img src="${photoUrl}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #10b981;" 
+                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3C/svg%3E'">
+                        <div style="font-size: 11px; margin-top: 5px;">${userName}</div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            html += `<br><strong>📊 تعداد کل عکس‌ها:</strong> ${files.length}`;
+            showResult('storageResult', html, false);
+        }
+    } catch(error) {
+        showResult('storageResult', `❌ خطا در دریافت لیست عکس‌ها: ${error.message}<br><br>⚠️ ممکن است نیاز باشد تنظیمات RLS برای خواندن لیست فایل‌ها فعال شود.`, true);
+    }
 }
 
 // ========== اجرای اولیه ==========

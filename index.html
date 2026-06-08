@@ -3,144 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meeting Manager | Professional Edition</title>
+    <title>Meeting Manager | Supabase Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { font-family: 'Poppins', sans-serif; }
-        
-        body { 
-            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
-            position: relative;
-        }
+        body { background: linear-gradient(135deg, #e0f2fe, #dcfce7); }
         
         .sidebar {
-            background: linear-gradient(180deg, #e6f7ec 0%, #d1fae5 100%);
+            background: linear-gradient(180deg, #e6f7ec, #d1fae5);
             border-right: 1px solid #a7f3d0;
+            width: 280px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            overflow-y: auto;
         }
         
-        .sidebar-item-active {
-            background: linear-gradient(95deg, #10b981 0%, #059669 100%);
-            color: white !important;
-            border-right: 3px solid #047857;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-        }
-        
-        .sidebar-item-active i {
-            color: white !important;
-        }
-        
-        .sidebar-link { 
-            transition: all 0.2s ease; 
-            color: #065f46;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        
-        .sidebar-link i {
-            color: #059669;
-            transition: all 0.2s ease;
-        }
-        
-        .sidebar-link:hover { 
-            background: rgba(16, 185, 129, 0.15); 
-            color: #047857; 
-            transform: translateX(5px);
-        }
-        
-        .btn-gradient-primary { 
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            transition: all 0.2s;
-        }
-        
-        .btn-gradient-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px -5px rgba(5, 150, 105, 0.3);
-        }
-        
-        .btn-gradient-success { 
-            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
-            transition: all 0.2s;
-        }
-        
-        .btn-gradient-success:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px -5px rgba(2, 132, 199, 0.3);
-        }
-        
-        .stat-card { 
-            transition: all 0.2s; 
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-        
-        .stat-card:hover { 
-            transform: translateY(-3px); 
-            background: white; 
-            box-shadow: 0 15px 25px -8px rgba(0, 0, 0, 0.1);
-        }
-        
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
-        }
-        
-        .chart-container { max-height: 220px; position: relative; }
-        canvas { max-height: 200px; width: 100% !important; }
-        
-        .form-row {
+        .sidebar-link {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 10px;
             align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            margin: 5px 15px;
+            border-radius: 12px;
+            color: #065f46;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
         }
-        .form-field {
-            flex: 1;
-            min-width: 140px;
-            font-size: 13px;
-            padding: 8px 12px;
-            border-radius: 10px;
-            border: 1px solid #bae6fd;
-            background: white;
+        
+        .sidebar-link:hover { background: rgba(16, 185, 129, 0.15); }
+        .sidebar-link.active { background: linear-gradient(95deg, #10b981, #059669); color: white; }
+        .sidebar-link.active i { color: white; }
+        
+        .main-content { margin-left: 280px; padding: 20px; min-height: 100vh; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
         
         .users-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
+            margin-top: 20px;
         }
         
         .user-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+            background: white;
             border-radius: 20px;
             padding: 18px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.06);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .user-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
-        }
-        
-        .user-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
         }
         
         .modal {
@@ -161,17 +96,14 @@
             border-radius: 24px;
             max-width: 500px;
             width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
             padding: 24px;
-            position: relative;
         }
         
         .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+            background: #065f46;
             color: white;
             padding: 10px 18px;
             border-radius: 10px;
@@ -179,1262 +111,563 @@
             align-items: center;
             gap: 10px;
             z-index: 1100;
-            box-shadow: 0 8px 20px -5px rgba(0,0,0,0.2);
-            animation: slideIn 0.25s ease, fadeOut 0.4s ease 2.5s forwards;
-            font-size: 13px;
+            animation: fadeOut 2.5s forwards;
         }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
+        
         @keyframes fadeOut {
-            to { opacity: 0; visibility: hidden; }
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
         }
         
-        .split-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .task-column {
-            background: #fefce8;
-            border-radius: 18px;
-            padding: 14px;
-            border: 1px solid #fde047;
-        }
-        .reminder-column {
-            background: #eff6ff;
-            border-radius: 18px;
-            padding: 14px;
-            border: 1px solid #93c5fd;
-        }
-        .task-item {
-            background: white;
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
             border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-left: 3px solid #eab308;
-            transition: all 0.15s;
-        }
-        .reminder-item {
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-left: 3px solid #3b82f6;
-            transition: all 0.15s;
+            font-size: 13px;
+            margin-bottom: 12px;
         }
         
-        .user-select-item {
-            transition: all 0.15s;
-        }
-        .user-select-item:hover {
-            background-color: #f0fdf4;
-            transform: translateX(3px);
-        }
-        
-        .group-checkbox {
-            width: 18px;
-            height: 18px;
-            border-radius: 5px;
-            border: 2px solid #cbd5e1;
-            cursor: pointer;
-        }
-        .group-checkbox:checked {
-            background-color: #10b981;
-            border-color: #10b981;
-        }
-        
-        .export-btn {
-            padding: 5px 10px;
-            font-size: 11px;
-            border-radius: 8px;
-            transition: all 0.15s;
-            cursor: pointer;
-        }
-        
-        .user-photo {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
-        
-        .user-photo-sm {
-            width: 40px;
-            height: 40px;
-        }
-        
-        .photo-placeholder {
-            width: 60px;
-            height: 60px;
+        .avatar {
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
             background: linear-gradient(135deg, #10b981, #059669);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         
-        .hidden {
-            display: none !important;
-        }
-        
-        .tab-content {
-            display: block;
-        }
-        
-        .tab-content.hidden {
-            display: none !important;
-        }
+        .flex { display: flex; gap: 12px; align-items: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .hidden { display: none !important; }
+        .w-full { width: 100%; }
+        .mt-2 { margin-top: 8px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .text-center { text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="flex h-screen">
-    <!-- SIDEBAR -->
-    <aside class="w-72 sidebar backdrop-blur-sm flex flex-col shadow-xl z-20">
-        <div class="p-5 border-b border-emerald-200">
-            <div class="flex items-center gap-3">
-                <div class="sidebar-logo rounded-xl p-2 shadow-md bg-gradient-to-r from-emerald-500 to-green-600">
-                    <i class="fas fa-calendar-alt text-white text-xl"></i>
-                </div>
-                <div>
-                    <h2 class="font-bold sidebar-title text-xl">Meeting<span class="text-emerald-600">Hub</span></h2>
-                    <p class="text-xs sidebar-subtitle text-emerald-700">Management System</p>
-                </div>
+<div class="sidebar">
+    <div style="padding: 20px; text-align: center; border-bottom: 1px solid #a7f3d0;">
+        <h2 style="color: #065f46;">Meeting<span style="color:#059669;">Hub</span></h2>
+        <p style="font-size: 10px; color: #047857;">Management System</p>
+    </div>
+    <nav>
+        <div class="sidebar-link active" data-tab="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</div>
+        <div class="sidebar-link" data-tab="users"><i class="fas fa-users"></i> Users</div>
+        <div class="sidebar-link" data-tab="meetings"><i class="fas fa-calendar-check"></i> Meetings</div>
+        <div class="sidebar-link" data-tab="tasks"><i class="fas fa-tasks"></i> Tasks</div>
+        <div class="sidebar-link" data-tab="reports"><i class="fas fa-chart-line"></i> Reports</div>
+    </nav>
+</div>
+
+<div class="main-content">
+    <header style="background: rgba(255,255,255,0.9); padding: 15px 25px; border-radius: 16px; margin-bottom: 20px;">
+        <div class="flex-between">
+            <div><h1 style="font-size: 22px;">📊 Meeting Manager Pro</h1><p style="font-size: 12px; color: gray;">Connected to Supabase</p></div>
+            <div class="flex"><i class="fas fa-user-circle" style="font-size: 24px; color: #059669;"></i><span>Admin</span></div>
+        </div>
+    </header>
+
+    <!-- Dashboard -->
+    <div id="dashboard-tab" class="tab-content active">
+        <div class="grid-4">
+            <div class="stat-card"><div class="flex-between"><span>Total Users</span><i class="fas fa-users" style="color:#10b981;"></i></div><p id="dashUsers" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p></div>
+            <div class="stat-card"><div class="flex-between"><span>Total Meetings</span><i class="fas fa-calendar-check" style="color:#3b82f6;"></i></div><p id="dashMeetings" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p></div>
+            <div class="stat-card"><div class="flex-between"><span>Meeting Types</span><i class="fas fa-chart-pie" style="color:#f59e0b;"></i></div><p id="dashTypes" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p></div>
+            <div class="stat-card"><div class="flex-between"><span>Avg Duration</span><i class="fas fa-hourglass-half" style="color:#8b5cf6;"></i></div><p id="dashAvg" style="font-size: 32px; font-weight: bold; color: #059669; margin-top: 10px;">0</p></div>
+        </div>
+        <div class="stat-card"><canvas id="typeChart" height="200"></canvas></div>
+    </div>
+
+    <!-- Users -->
+    <div id="users-tab" class="tab-content">
+        <div class="flex-between mb-4">
+            <h2>👥 User Management</h2>
+            <div class="flex">
+                <button onclick="openAddUserModal()" class="btn-primary">➕ Add User</button>
+                <label class="btn-primary" style="cursor:pointer;">📂 Excel<input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelUpload(this)"></label>
+                <button onclick="exportFullJSON()" class="btn-primary">📥 Export</button>
             </div>
         </div>
-        
-        <nav class="flex-1 py-6 px-3 space-y-1.5">
-            <a href="#" data-tab="dashboard" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-chart-pie w-5"></i> Dashboard
-            </a>
-            <a href="#" data-tab="users" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-users w-5"></i> Users
-            </a>
-            <a href="#" data-tab="meetings" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-calendar-check w-5"></i> Meetings
-            </a>
-            <a href="#" data-tab="tasks" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-tasks w-5"></i> Tasks & Reminders
-                <span id="taskNotificationBadge" class="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 hidden">0</span>
-            </a>
-            <a href="#" data-tab="reports" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-chart-line w-5"></i> Reports
-            </a>
-        </nav>
-        
-        <div class="p-4 border-t border-emerald-200 text-xs text-emerald-700">
-            <i class="fas fa-cloud-upload-alt mr-1"></i> Cloud Sync
+        <div id="usersListContainer" class="users-grid"></div>
+    </div>
+
+    <!-- Meetings -->
+    <div id="meetings-tab" class="tab-content">
+        <div class="stat-card">
+            <div class="flex-between mb-4"><h2>📅 Schedule Meeting</h2><button onclick="openGroupMeetingModal()" class="btn-primary">👥 Group Meeting</button></div>
+            <select id="meetingUserSelect" class="form-input"><option value="">-- Select User --</option></select>
+            <input type="datetime-local" id="meetingDateTime" class="form-input">
+            <input type="number" id="meetingDuration" placeholder="Duration (min)" class="form-input">
+            <select id="meetingType" class="form-input">
+                <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
+                <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
+                <option value="Project Review">📁 Project Review</option>
+            </select>
+            <textarea id="meetingMom" rows="3" placeholder="MOM..." class="form-input"></textarea>
+            <button onclick="addMeeting()" class="btn-primary w-full">💾 Save Meeting</button>
         </div>
-    </aside>
+        <h2 class="mb-4">📋 Users Summary</h2>
+        <div id="usersCardsContainer" class="users-grid"></div>
+    </div>
 
-    <!-- MAIN CONTENT -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-        <header class="bg-white/90 backdrop-blur-sm sticky top-0 z-10 shadow-md">
-            <div class="px-6 py-3 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center shadow-md">
-                        <i class="fas fa-calendar-week text-white text-sm"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">Meeting Manager Pro</h3>
-                        <p class="text-xs text-gray-500">Manage your meetings efficiently</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="bg-white/70 px-3 py-1.5 rounded-full shadow-sm">
-                        <i class="fas fa-user text-emerald-600 text-sm mr-1"></i>
-                        <span class="text-sm font-medium text-gray-700">Admin</span>
-                    </div>
-                </div>
-            </div>
-        </header>
+    <!-- Tasks -->
+    <div id="tasks-tab" class="tab-content">
+        <div class="stat-card">
+            <h2 class="mb-4">✅ Tasks & Reminders</h2>
+            <div class="flex"><select id="itemType" class="form-input" onchange="toggleTaskFields()"><option value="task">Task</option><option value="reminder">Reminder</option></select><input type="text" id="itemTitle" placeholder="Title" class="form-input"></div>
+            <div class="flex"><input type="date" id="itemDate" class="form-input"><input type="time" id="itemTime" class="form-input"><select id="taskPriority" class="form-input"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+            <textarea id="reminderDesc" rows="2" placeholder="Description" class="form-input" style="display:none;"></textarea>
+            <button onclick="addTaskOrReminder()" class="btn-primary w-full mt-2">➕ Add</button>
+        </div>
+        <div class="flex mt-4"><div class="stat-card flex-1"><h3>Tasks <span id="taskCount" style="background:#fef3c7; padding:2px 10px; border-radius:20px;">0</span></h3><div id="tasksListContainer" style="max-height:400px; overflow-y:auto;"></div></div><div class="stat-card flex-1"><h3>Reminders <span id="reminderCount" style="background:#dbeafe; padding:2px 10px; border-radius:20px;">0</span></h3><div id="remindersListContainer" style="max-height:400px; overflow-y:auto;"></div></div></div>
+    </div>
 
-        <main class="flex-1 overflow-y-auto p-5">
-            <!-- DASHBOARD -->
-            <div id="dashboard-tab" class="tab-content space-y-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-800">📊 Dashboard</h1>
-                    <p class="text-gray-500 text-xs mt-1">Key metrics at a glance</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Total Users</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center">
-                                <i class="fas fa-users text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashUsers">0</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Total Meetings</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 flex items-center justify-center">
-                                <i class="fas fa-calendar-check text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashMeetings">0</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Meeting Types</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center">
-                                <i class="fas fa-chart-pie text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashTypes">0</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Avg Duration</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 flex items-center justify-center">
-                                <i class="fas fa-hourglass-half text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashAvg">0</p>
-                    </div>
-                </div>
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold text-gray-800 text-md mb-3">📈 Meetings by Type</h3>
-                    <div class="chart-container"><canvas id="typeChart" height="150"></canvas></div>
-                </div>
-            </div>
-
-            <!-- USERS TAB -->
-            <div id="users-tab" class="tab-content hidden space-y-4">
-                <div class="flex justify-between items-center flex-wrap gap-2">
-                    <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-user-plus mr-2 text-emerald-600"></i>User Management</h2>
-                    <div class="flex gap-2 flex-wrap">
-                        <button onclick="openAddUserModal()" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-plus mr-1"></i> Add User</button>
-                        <label class="bg-gradient-to-r from-blue-500 to-cyan-600 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer shadow-md"><i class="fas fa-upload mr-1"></i> Excel<input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelUpload(this)"></label>
-                        <button onclick="exportFullJSON()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-download mr-1"></i> Export</button>
-                        <label class="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer shadow-md"><i class="fas fa-upload mr-1"></i> Import<input type="file" id="importJSON" accept=".json" class="hidden" onchange="importJSON(this)"></label>
-                        <span id="userCountBadge" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-bold">0 users</span>
-                    </div>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold text-gray-800 mb-3 text-md"><i class="fas fa-list mr-2 text-emerald-600"></i> Users List</h3>
-                    <div id="usersListContainer" class="users-grid"></div>
-                </div>
-            </div>
-
-            <!-- MEETINGS TAB -->
-            <div id="meetings-tab" class="tab-content hidden space-y-5">
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-5 shadow-md">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-calendar-plus mr-2 text-emerald-600"></i>Schedule Meeting</h2>
-                        <button onclick="openGroupMeetingModal()" class="btn-gradient-primary text-white px-4 py-2 rounded-lg text-sm shadow-md flex items-center gap-2">
-                            <i class="fas fa-users"></i> Group Meeting
-                        </button>
-                    </div>
-                    <div class="form-row">
-                        <select id="meetingUserSelect" class="form-field text-sm"><option value="">-- Select User --</option></select>
-                        <input type="datetime-local" id="meetingDateTime" class="form-field text-sm">
-                        <input type="number" id="meetingDuration" placeholder="Duration (min)" class="form-field text-sm">
-                    </div>
-                    <div class="form-row">
-                        <select id="meetingType" class="form-field text-sm">
-                            <option value="Individual">👤 Individual</option>
-                            <option value="Team">👥 Team</option>
-                            <option value="Disciplinary">⚖️ Disciplinary</option>
-                            <option value="CLF">📊 CLF</option>
-                            <option value="Project Review">📁 Project Review</option>
-                            <option value="Strategic">🎯 Strategic</option>
-                            <option value="One on One">🤝 One on One</option>
-                        </select>
-                        <button onclick="addMeeting()" class="btn-gradient-success text-white px-5 py-2 rounded-lg text-sm shadow-md font-semibold">
-                            <i class="fas fa-save mr-1"></i> Save
-                        </button>
-                    </div>
-                    <textarea id="meetingMom" rows="2" placeholder="Minutes of Meeting (MOM)..." class="w-full border border-gray-300 rounded-lg p-2 mt-3 text-sm focus:ring-1 focus:ring-emerald-400 outline-none"></textarea>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-5 shadow-md">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-id-card mr-2 text-emerald-600"></i>Users Summary</h2>
-                        <span id="userListCount" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-bold">0 users</span>
-                    </div>
-                    <div id="usersCardsContainer" class="users-grid"></div>
-                </div>
-            </div>
-
-            <!-- TASKS & REMINDERS TAB -->
-            <div id="tasks-tab" class="tab-content hidden space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-tasks mr-2 text-emerald-600"></i>Tasks & Reminders</h2>
-                </div>
-                
-                <div class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold text-gray-800 mb-3 text-md"><i class="fas fa-plus-circle mr-2 text-emerald-600"></i> Add New</h3>
-                    <div class="form-row">
-                        <select id="itemType" class="form-field text-sm" onchange="toggleTaskReminderFields()">
-                            <option value="task">✅ Task</option>
-                            <option value="reminder">⏰ Reminder</option>
-                        </select>
-                        <input type="text" id="itemTitle" placeholder="Title..." class="form-field text-sm">
-                    </div>
-                    <div class="form-row">
-                        <input type="date" id="itemDate" class="form-field text-sm">
-                        <input type="time" id="itemTime" class="form-field text-sm" step="60">
-                        <select id="taskPriority" class="form-field text-sm">
-                            <option value="low">🟢 Low</option>
-                            <option value="medium">🟡 Medium</option>
-                            <option value="high">🔴 High</option>
-                        </select>
-                        <textarea id="reminderDesc" rows="1" placeholder="Description..." class="form-field text-sm" style="display: none;"></textarea>
-                        <button onclick="addTaskOrReminder()" class="btn-gradient-primary text-white px-5 py-2 rounded-lg text-sm shadow-md whitespace-nowrap">
-                            <i class="fas fa-plus mr-1"></i> Add
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="split-container">
-                    <div class="task-column shadow-md">
-                        <div class="column-header text-sm mb-2">
-                            <span><i class="fas fa-check-circle mr-1"></i>Tasks</span>
-                            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold" id="taskCount">0</span>
-                        </div>
-                        <div id="tasksListContainer" class="space-y-1.5 max-h-[400px] overflow-y-auto pr-1"></div>
-                    </div>
-                    
-                    <div class="reminder-column shadow-md">
-                        <div class="column-header text-sm mb-2">
-                            <span><i class="fas fa-bell mr-1"></i>Reminders</span>
-                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold" id="reminderCount">0</span>
-                        </div>
-                        <div id="remindersListContainer" class="space-y-1.5 max-h-[400px] overflow-y-auto pr-1"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- REPORTS -->
-            <div id="reports-tab" class="tab-content hidden space-y-4">
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h2 class="text-lg font-bold mb-3 text-gray-800"><i class="fas fa-chart-pie mr-2 text-emerald-600"></i>Meeting Distribution</h2>
-                    <div class="chart-container"><canvas id="reportChart" height="180"></canvas></div>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold mb-2 text-gray-800 text-md"><i class="fas fa-download mr-2 text-emerald-600"></i> Export Reports</h3>
-                    <div class="export-buttons flex gap-2 flex-wrap">
-                        <button onclick="exportMeetingsReport()" class="export-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs px-2 py-1 rounded"><i class="fas fa-calendar-alt mr-1"></i> Meetings</button>
-                        <button onclick="exportUsersReport()" class="export-btn bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs px-2 py-1 rounded"><i class="fas fa-users mr-1"></i> Users</button>
-                        <button onclick="exportTasksReport()" class="export-btn bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs px-2 py-1 rounded"><i class="fas fa-tasks mr-1"></i> Tasks</button>
-                        <button onclick="exportFullReport()" class="export-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs px-2 py-1 rounded"><i class="fas fa-file-alt mr-1"></i> Full</button>
-                        <button onclick="exportStatistics()" class="export-btn bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs px-2 py-1 rounded"><i class="fas fa-chart-bar mr-1"></i> Stats</button>
-                    </div>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold mb-2 text-gray-800 text-md"><i class="fas fa-history mr-2 text-emerald-600"></i> Recent Activity</h3>
-                    <div id="recentLogs" class="space-y-1 text-xs max-h-36 overflow-y-auto pr-1"></div>
-                </div>
-            </div>
-        </main>
+    <!-- Reports -->
+    <div id="reports-tab" class="tab-content">
+        <div class="stat-card"><canvas id="reportChart" height="300"></canvas></div>
+        <div class="stat-card mt-4"><h3>📤 Export Reports</h3><div class="flex flex-wrap gap-2 mt-2"><button onclick="exportUsersReport()" class="btn-primary" style="padding:6px 12px;">Users</button><button onclick="exportMeetingsReport()" class="btn-primary" style="padding:6px 12px;">Meetings</button><button onclick="exportTasksReport()" class="btn-primary" style="padding:6px 12px;">Tasks</button></div></div>
+        <div class="stat-card mt-4"><h3>🕐 Recent Activity</h3><div id="recentLogs" class="mt-2"></div></div>
     </div>
 </div>
 
 <!-- Modals -->
-<div id="groupMeetingModal" class="modal" onclick="closeGroupMeetingModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-users mr-2 text-emerald-600"></i>Group Meeting Setup</h3>
-            <button onclick="closeGroupMeetingModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="groupMeetingModalBody"></div>
-    </div>
-</div>
-
-<div id="scheduleModal" class="modal" onclick="closeScheduleModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800" id="scheduleModalTitle">Schedule Meeting</h3>
-            <button onclick="closeScheduleModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="scheduleModalBody"></div>
-    </div>
-</div>
-
-<div id="userModal" class="modal" onclick="closeModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800" id="modalTitle">User Meetings</h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="modalBody"></div>
-    </div>
-</div>
-
-<div id="addUserModal" class="modal" onclick="closeAddUserModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800">Add New User</h3>
-            <button onclick="closeAddUserModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div>
-            <input type="text" id="newUsername" placeholder="Username" class="w-full border border-gray-300 rounded-lg p-2 text-sm mb-3">
-            <div class="flex gap-2">
-                <button onclick="saveNewUser()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm font-semibold">Add</button>
-                <button onclick="closeAddUserModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-semibold">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="editUserModal" class="modal" onclick="closeEditUserModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800">Edit User</h3>
-            <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="editUserModalBody"></div>
-    </div>
-</div>
+<div id="addUserModal" class="modal"><div class="modal-content"><h3 class="text-xl font-bold mb-4">➕ Add New User</h3><input type="text" id="newUsername" placeholder="Username" class="form-input"><div class="flex gap-2 mt-4"><button onclick="saveNewUser()" class="btn-primary flex-1">Save</button><button onclick="closeAddUserModal()" class="btn-primary flex-1" style="background:#6b7280;">Cancel</button></div></div></div>
+<div id="groupMeetingModal" class="modal"><div class="modal-content"><div id="groupMeetingModalBody"></div></div></div>
+<div id="userModal" class="modal"><div class="modal-content"><h3 id="modalTitle" class="text-xl font-bold mb-4">User Meetings</h3><div id="modalBody"></div><button onclick="closeModal()" class="btn-primary w-full mt-4">Close</button></div></div>
+<div id="scheduleModal" class="modal"><div class="modal-content"><div id="scheduleModalBody"></div></div></div>
 
 <script>
-// ========== تنظیمات Supabase ==========
+// ========== Supabase Config ==========
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-// ایجاد کلاینت Supabase
 const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('✅ Supabase connected');
+console.log('✅ Supabase client created');
 
-let users = [];
-let meetings = [];
-let tasks = [];
+let users = [], meetings = [], tasks = [];
 let chart1 = null, chart2 = null;
-let renderTimeout = null;
-let currentEditUserId = null;
 
-// ========== توابع کمکی ==========
-function showToast(message, type = "success") {
-    let toast = document.createElement("div");
-    toast.className = `toast`;
-    toast.innerHTML = `<i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"} text-sm"></i><span>${message}</span>`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
+// ========== Helper Functions ==========
+function showToast(msg) {
+    let t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
 }
 
-function debounceRender() {
-    if(renderTimeout) clearTimeout(renderTimeout);
-    renderTimeout = setTimeout(() => {
-        renderAll();
-    }, 50);
-}
+function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
+function getInitial(n) { return n ? n.charAt(0).toUpperCase() : "?"; }
+function getPhotoUrl(username) { if (!username) return null; return `${SUPABASE_URL}/storage/v1/object/public/user-photos/${username.replace(/\s/g, '').toLowerCase()}.png`; }
 
-// تابع صحیح برای دریافت آدرس عکس از Supabase Storage
-function getPhotoUrl(username) {
-    if(!username) return null;
-    // حذف فاصله و کاراکترهای خاص از نام کاربری برای ساخت نام فایل
-    let fileName = username.replace(/\s/g, '').toLowerCase();
-    // آدرس مستقیم عکس در Supabase Storage
-    return `${SUPABASE_URL}/storage/v1/object/public/user-photos/${fileName}.png`;
-}
+// ========== Menu - این بخش بسیار مهم است ==========
+document.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const tabName = this.getAttribute('data-tab');
+        console.log('Clicked tab:', tabName);
+        
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+        
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        const activeTab = document.getElementById(`${tabName}-tab`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+            console.log('Tab activated:', tabName);
+        }
+        
+        if (tabName === 'users') renderUsersList();
+        if (tabName === 'meetings') renderUsersCards();
+        if (tabName === 'tasks') renderTasksAndReminders();
+        if (tabName === 'dashboard' || tabName === 'reports') updateDashboardAndCharts();
+    });
+});
+console.log('Menu listeners added');
 
-function getInitial(name) {
-    if(!name) return "?";
-    return name.charAt(0).toUpperCase();
-}
-
-function escapeHtml(str) {
-    if(!str) return '';
-    return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
-}
-
-// ========== بارگذاری از Supabase ==========
+// ========== Load from Supabase ==========
 async function loadUsers() {
     try {
-        let { data, error } = await supabase.from('users').select('*');
+        console.log('Loading users from Supabase...');
+        const { data, error } = await supabase.from('users').select('*');
+        
         if (error) {
             console.error('Supabase error:', error);
+            showToast('Error loading users from Supabase!', 'error');
         } else if (data && data.length > 0) {
             users = data;
-            renderAll();
-            return;
+            console.log(`✅ Loaded ${users.length} users from Supabase`);
+        } else {
+            console.log('No users found in Supabase, using sample data');
+            users = [
+                { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
+                { id: 2, username: "سارا محمدی", email: "sara@example.com" },
+                { id: 3, username: "رضا کریمی", email: "reza@example.com" }
+            ];
+            await syncUsers();
         }
+        renderUsersList();
+        renderUsersCards();
+        renderUserSelect();
+        updateCounts();
     } catch(e) {
-        console.warn('Supabase connection error:', e);
+        console.error('Connection error:', e);
+        showToast('Cannot connect to Supabase!', 'error');
     }
-    
-    // Fallback: load from localStorage
-    let stored = localStorage.getItem('mm_users');
-    if (stored) {
-        users = JSON.parse(stored);
-    }
-    if (users.length === 0) {
-        users = [
-            { id: 1, username: "احمد", email: "ahmad@example.com" },
-            { id: 2, username: "سارا", email: "sara@example.com" },
-            { id: 3, username: "رضا", email: "reza@example.com" }
-        ];
-        saveUsersToStorage();
-    }
-    renderAll();
 }
 
 async function loadMeetings() {
     try {
-        let { data, error } = await supabase.from('meetings').select('*');
-        if (error) {
-            console.error('Supabase error:', error);
-        } else if (data && data.length > 0) {
-            meetings = data;
-            renderAll();
-            return;
-        }
+        const { data, error } = await supabase.from('meetings').select('*');
+        if (error) throw error;
+        meetings = data || [];
+        console.log(`✅ Loaded ${meetings.length} meetings from Supabase`);
+        renderUsersCards();
+        updateDashboardAndCharts();
+        updateCounts();
     } catch(e) {
-        console.warn('Supabase connection error:', e);
-    }
-    
-    let stored = localStorage.getItem('mm_meetings');
-    if (stored) {
-        meetings = JSON.parse(stored);
-    } else {
+        console.error('Error loading meetings:', e);
         meetings = [];
     }
-    renderAll();
 }
 
 async function loadTasks() {
     try {
-        let { data, error } = await supabase.from('tasks').select('*');
-        if (error) {
-            console.error('Supabase error:', error);
-        } else if (data && data.length > 0) {
-            tasks = data;
-            renderTasksAndReminders();
-            return;
+        const { data, error } = await supabase.from('tasks').select('*');
+        if (error) throw error;
+        tasks = data || [];
+        if (tasks.length === 0) {
+            let today = new Date().toISOString().slice(0,10);
+            tasks = [
+                { id: 1, type: "task", title: "Review reports", date: today, time: "14:00", priority: "high", completed: false },
+                { id: 2, type: "reminder", title: "Team meeting", date: today, time: "09:30", description: "Prepare slides", completed: false }
+            ];
+            await syncTasks();
         }
+        console.log(`✅ Loaded ${tasks.length} tasks from Supabase`);
+        renderTasksAndReminders();
     } catch(e) {
-        console.warn('Supabase connection error:', e);
+        console.error('Error loading tasks:', e);
+        tasks = [];
     }
-    
-    let stored = localStorage.getItem('mm_tasks');
-    if (stored) {
-        tasks = JSON.parse(stored);
-    }
-    if (tasks.length === 0) {
-        let today = new Date().toISOString().slice(0,10);
-        tasks = [
-            { id: 1, type: "task", title: "Review reports", date: today, time: "14:00", priority: "high", completed: false },
-            { id: 2, type: "reminder", title: "Team meeting", date: today, time: "09:30", description: "Prepare slides", completed: false }
-        ];
-        saveTasksToStorage();
-    }
-    renderTasksAndReminders();
-}
-
-// ========== ذخیره در localStorage به عنوان fallback ==========
-function saveUsersToStorage() {
-    localStorage.setItem('mm_users', JSON.stringify(users));
-}
-
-function saveMeetingsToStorage() {
-    localStorage.setItem('mm_meetings', JSON.stringify(meetings));
-}
-
-function saveTasksToStorage() {
-    localStorage.setItem('mm_tasks', JSON.stringify(tasks));
 }
 
 async function syncUsers() {
-    saveUsersToStorage();
     try {
         for(let u of users) {
             await supabase.from('users').upsert(u, { onConflict: 'id' });
         }
         console.log('Users synced to Supabase');
-    } catch(e) {
-        console.warn('Supabase sync error:', e);
-    }
+    } catch(e) { console.error(e); }
 }
 
 async function syncMeetings() {
-    saveMeetingsToStorage();
     try {
         for(let m of meetings) {
             await supabase.from('meetings').upsert(m, { onConflict: 'id' });
         }
-        console.log('Meetings synced to Supabase');
-    } catch(e) {
-        console.warn('Supabase sync error:', e);
-    }
+    } catch(e) { console.error(e); }
 }
 
 async function syncTasks() {
-    saveTasksToStorage();
     try {
         for(let t of tasks) {
             await supabase.from('tasks').upsert(t, { onConflict: 'id' });
         }
-        console.log('Tasks synced to Supabase');
-    } catch(e) {
-        console.warn('Supabase sync error:', e);
-    }
+    } catch(e) { console.error(e); }
 }
 
-// ========== منوها ==========
-function switchTab(tabId) {
-    // مخفی کردن تمام تب‌ها
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.add('hidden');
-    });
-    
-    // نمایش تب انتخاب شده
-    const selectedTab = document.getElementById(`${tabId}-tab`);
-    if (selectedTab) {
-        selectedTab.classList.remove('hidden');
-    } else {
-        console.error(`Tab with id ${tabId}-tab not found`);
-        return;
-    }
-    
-    // حذف کلاس active از تمام لینک‌های سایدبار
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.classList.remove('sidebar-item-active');
-    });
-    
-    // اضافه کردن کلاس active به لینک انتخاب شده
-    const activeLink = document.querySelector(`.sidebar-link[data-tab="${tabId}"]`);
-    if (activeLink) {
-        activeLink.classList.add('sidebar-item-active');
-    }
-    
-    // آپدیت محتوای تب‌ها بر اساس نیاز
-    if (tabId === 'dashboard' || tabId === 'reports') {
-        updateDashboardAndCharts();
-    }
-    if (tabId === 'meetings') {
-        renderUsersCards();
-    }
-    if (tabId === 'tasks') {
-        renderTasksAndReminders();
-    }
-    if (tabId === 'users') {
-        renderUsersList();
-    }
-}
+// ========== User CRUD ==========
+function openAddUserModal() { document.getElementById('addUserModal').style.display = 'flex'; document.getElementById('newUsername').value = ''; }
+function closeAddUserModal() { document.getElementById('addUserModal').style.display = 'none'; }
 
-// ========== رندرها ==========
-function renderAll() { 
-    renderUserSelect(); 
-    renderUsersCards();
+async function saveNewUser() {
+    let username = document.getElementById('newUsername').value.trim();
+    if (!username) { showToast("Username required!"); return; }
+    if (users.some(u => u.username === username)) { showToast("Username exists!"); return; }
+    
+    let newUser = { id: Date.now(), username: username, email: "" };
+    users.push(newUser);
+    await syncUsers();
+    closeAddUserModal();
     renderUsersList();
-    renderTasksAndReminders();
-    updateDashboardAndCharts(); 
-    updateUserCounts();
+    renderUsersCards();
+    renderUserSelect();
+    updateCounts();
+    showToast(`✅ User "${username}" added to Supabase`);
 }
 
+async function deleteUser(id) {
+    if (!confirm("Delete this user?")) return;
+    users = users.filter(u => u.id !== id);
+    meetings = meetings.filter(m => m.userId !== id);
+    await syncUsers();
+    await syncMeetings();
+    renderUsersList();
+    renderUsersCards();
+    renderUserSelect();
+    updateCounts();
+    showToast("User deleted");
+}
+
+// ========== Render Functions ==========
 function renderUsersList() {
-    let container = document.getElementById("usersListContainer");
-    if(!container) return;
-    if(users.length === 0) { 
-        container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>No users yet. Add users via Add User button.</div>"; 
-        return; 
-    }
+    let container = document.getElementById('usersListContainer');
+    if (!container) return;
+    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
     
-    let html = '';
-    for(let u of users) {
-        let userMeetings = meetings.filter(m => m.userId === u.id);
-        let meetingCount = userMeetings.length;
-        let photoUrl = getPhotoUrl(u.username);
-        html += `
-            <div class="user-card">
-                <div class="flex items-center gap-3 mb-3">
-                    <img src="${photoUrl}" class="user-photo" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                    <div class="photo-placeholder" style="display:none">${getInitial(u.username)}</div>
-                    <div>
-                        <div class="font-bold text-gray-800">${escapeHtml(u.username)}</div>
-                        ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
-                    </div>
-                </div>
-                <div class="pt-2">
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500 text-xs"></i> Meetings:</span>
-                        <span class="font-bold text-emerald-600">${meetingCount}</span>
-                    </div>
-                </div>
-                <div class="user-actions flex gap-2 mt-3 pt-2 border-t border-gray-100">
-                    <button onclick="openEditUserModal(${u.id})" class="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg"><i class="fas fa-edit mr-1"></i> Edit</button>
-                    <button onclick="deleteUser(${u.id})" class="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg"><i class="fas fa-trash-alt mr-1"></i> Delete</button>
-                </div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
+    container.innerHTML = users.map(u => `
+        <div class="user-card">
+            <div class="flex"><div class="avatar">${getInitial(u.username)}</div>
+            <div><div class="font-bold">${escapeHtml(u.username)}</div><div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} meetings</div></div></div>
+            <div class="flex mt-3"><button onclick="openEditUserModal(${u.id})" class="btn-primary flex-1" style="background:#3b82f6;">Edit</button><button onclick="deleteUser(${u.id})" class="btn-primary flex-1" style="background:#ef4444;">Delete</button></div>
+        </div>
+    `).join('');
 }
 
 function renderUsersCards() {
-    let container = document.getElementById("usersCardsContainer");
-    if(!container) return;
-    if(users.length === 0) { 
-        container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>No users added yet.</div>"; 
-        return; 
-    }
+    let container = document.getElementById('usersCardsContainer');
+    if (!container) return;
+    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
     
-    let html = '';
-    for(let u of users) {
-        let userMeetings = meetings.filter(m => m.userId === u.id);
-        let meetingCount = userMeetings.length;
-        let totalDuration = userMeetings.reduce((sum, m) => sum + m.duration, 0);
-        let photoUrl = getPhotoUrl(u.username);
-        html += `
-            <div class="user-card">
-                <div class="flex justify-between items-start mb-3">
-                    <button onclick="openScheduleModal(${u.id})" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-calendar-plus mr-1"></i> Set Meeting</button>
-                    <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> Details</button>
-                </div>
-                <div class="flex items-center gap-3 mb-3">
-                    <img src="${photoUrl}" class="user-photo" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                    <div class="photo-placeholder" style="display:none">${getInitial(u.username)}</div>
-                    <div>
-                        <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
-                        ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
-                    </div>
-                </div>
-                <div class="border-t border-gray-100 pt-3 space-y-2">
-                    <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500"></i> Meetings:</span><span class="font-bold text-emerald-600">${meetingCount}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-hourglass-half mr-1 text-blue-500"></i> Total Duration:</span><span class="font-bold text-blue-600">${totalDuration} min</span></div>
-                </div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
+    container.innerHTML = users.map(u => `
+        <div class="user-card">
+            <div class="flex"><div class="avatar">${getInitial(u.username)}</div><div><div class="font-bold">${escapeHtml(u.username)}</div><div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} meetings</div></div></div>
+            <div class="flex mt-3"><button onclick="selectUserForMeeting(${u.id})" class="btn-primary flex-1">Set Meeting</button><button onclick="showUserDetails(${u.id})" class="btn-primary flex-1" style="background:#3b82f6;">Details</button></div>
+        </div>
+    `).join('');
 }
 
-function renderTasksAndReminders() {
-    let tasksContainer = document.getElementById("tasksListContainer");
-    let remindersContainer = document.getElementById("remindersListContainer");
-    if(!tasksContainer || !remindersContainer) return;
-    
-    let tasksList = tasks.filter(t => t.type === "task");
-    let remindersList = tasks.filter(t => t.type === "reminder");
-    
-    document.getElementById("taskCount") && (document.getElementById("taskCount").innerText = tasksList.length);
-    document.getElementById("reminderCount") && (document.getElementById("reminderCount").innerText = remindersList.length);
-    
-    let today = new Date().toISOString().slice(0,10);
-    
-    if(tasksList.length === 0) {
-        tasksContainer.innerHTML = "<div class='text-center text-gray-400 py-3 text-xs'>No tasks</div>";
-    } else {
-        let tasksHtml = '';
-        for(let t of tasksList) {
-            let isToday = t.date === today;
-            tasksHtml += `
-                <div class="task-item text-sm p-2 ${t.completed ? 'bg-gray-100' : ''}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 text-xs">✅ ${escapeHtml(t.title)} ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}</div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">${t.date} ${t.time} • ${t.priority === 'high' ? '🔴 High' : (t.priority === 'medium' ? '🟡 Medium' : '🟢 Low')}</div>
-                        </div>
-                        <div class="flex gap-1">
-                            ${!t.completed ? `<button onclick="markTaskComplete(${t.id})" class="text-green-500 text-xs"><i class="fas fa-check-circle"></i></button>` : ''}
-                            <button onclick="deleteTask(${t.id})" class="text-red-400 text-xs"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        tasksContainer.innerHTML = tasksHtml;
-    }
-    
-    if(remindersList.length === 0) {
-        remindersContainer.innerHTML = "<div class='text-center text-gray-400 py-3 text-xs'>No reminders</div>";
-    } else {
-        let remindersHtml = '';
-        for(let r of remindersList) {
-            let isToday = r.date === today;
-            remindersHtml += `
-                <div class="reminder-item text-sm p-2 ${r.completed ? 'bg-gray-100' : ''}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 text-xs">⏰ ${escapeHtml(r.title)} ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}</div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">${r.date} ${r.time}</div>
-                            <div class="text-[10px] text-gray-600 mt-0.5">📝 ${escapeHtml(r.description || '')}</div>
-                        </div>
-                        <div class="flex gap-1">
-                            ${!r.completed ? `<button onclick="markTaskComplete(${r.id})" class="text-green-500 text-xs"><i class="fas fa-check-circle"></i></button>` : ''}
-                            <button onclick="deleteTask(${r.id})" class="text-red-400 text-xs"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        remindersContainer.innerHTML = remindersHtml;
-    }
+function selectUserForMeeting(id) {
+    document.getElementById('meetingUserSelect').value = id;
+    document.getElementById('meetingDateTime').focus();
+    showToast("Fill meeting details and click Save");
 }
 
 function renderUserSelect() {
-    let sel = document.getElementById("meetingUserSelect");
-    if(sel) { 
-        let options = '<option value="">-- Select User --</option>'; 
-        for(let u of users) options += `<option value="${u.id}">${escapeHtml(u.username)}</option>`; 
-        sel.innerHTML = options; 
-    }
+    let sel = document.getElementById('meetingUserSelect');
+    if (sel) sel.innerHTML = '<option value="">-- Select User --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
 }
 
-// ========== CRUD ==========
-async function saveNewUser() {
-    let username = document.getElementById("newUsername").value.trim();
-    if(!username) { showToast("Username required!", "error"); return; }
-    if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
-    if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
-    users.push({ id: Date.now(), username: username, email: "" });
-    await syncUsers();
-    closeAddUserModal();
-    renderAll();
-    showToast(`User "${username}" added`);
+function showUserDetails(id) {
+    let user = users.find(u => u.id === id);
+    let userMeetings = meetings.filter(m => m.userId === id);
+    document.getElementById('modalTitle').innerHTML = `📅 ${escapeHtml(user.username)} - ${userMeetings.length} meetings`;
+    if (userMeetings.length === 0) { document.getElementById('modalBody').innerHTML = '<div class="text-center text-gray-400 py-6">No meetings</div>'; }
+    else { document.getElementById('modalBody').innerHTML = userMeetings.map(m => `<div class="border-b pb-2 mb-2"><div class="font-bold">${m.date} ${m.time}</div><div class="text-sm">${m.duration} min • ${m.type}</div><div class="text-xs text-gray-600 mt-1">📝 ${escapeHtml(m.mom.substring(0,100))}</div><button onclick="deleteMeeting(${m.id})" class="text-red-500 text-xs mt-1">Delete</button></div>`).join(''); }
+    document.getElementById('userModal').style.display = 'flex';
 }
 
-async function deleteUser(userId) {
-    if(confirm("Are you sure you want to delete this user and all their meetings?")) {
-        users = users.filter(u => u.id !== userId);
-        meetings = meetings.filter(m => m.userId !== userId);
-        await syncUsers();
-        await syncMeetings();
-        renderAll();
-        showToast("User deleted");
-    }
+function closeModal() { document.getElementById('userModal').style.display = 'none'; }
+
+async function deleteMeeting(id) {
+    if (confirm("Delete meeting?")) { meetings = meetings.filter(m => m.id !== id); await syncMeetings(); closeModal(); renderUsersCards(); updateDashboardAndCharts(); updateCounts(); showToast("Meeting deleted"); }
 }
 
+function openEditUserModal(id) {
+    let user = users.find(u => u.id === id);
+    if (!user) return;
+    let html = `<input type="text" id="editUsername" value="${escapeHtml(user.username)}" class="form-input"><input type="email" id="editEmail" value="${escapeHtml(user.email||'')}" class="form-input"><div class="flex gap-2 mt-4"><button onclick="saveEditedUser(${id})" class="btn-primary flex-1">Save</button><button onclick="closeEditUserModal()" class="btn-primary flex-1" style="background:#6b7280;">Cancel</button></div>`;
+    document.getElementById('editUserModalBody').innerHTML = html;
+    document.getElementById('editUserModal').style.display = 'flex';
+}
+
+async function saveEditedUser(id) {
+    let newUsername = document.getElementById('editUsername').value.trim();
+    let newEmail = document.getElementById('editEmail').value.trim();
+    if (!newUsername) { showToast("Username required!"); return; }
+    let idx = users.findIndex(u => u.id === id);
+    if (idx !== -1) { users[idx].username = newUsername; users[idx].email = newEmail; await syncUsers(); meetings.forEach(m => { if (m.userId === id) m.userName = newUsername; }); await syncMeetings(); renderAll(); showToast("User updated"); }
+    closeEditUserModal();
+}
+
+function closeEditUserModal() { document.getElementById('editUserModal').style.display = 'none'; }
+
+// ========== Meeting CRUD ==========
 async function addMeeting() {
-    let userId = document.getElementById("meetingUserSelect").value;
-    if(!userId) { showToast("Select a user!", "error"); return; }
-    let dateTime = document.getElementById("meetingDateTime").value;
-    let duration = document.getElementById("meetingDuration").value;
-    let type = document.getElementById("meetingType").value;
-    let mom = document.getElementById("meetingMom").value.trim() || "No MOM";
-    if(!dateTime || !duration) { showToast("Fill all fields!", "error"); return; }
+    let userId = document.getElementById('meetingUserSelect').value;
+    if (!userId) { showToast("Select user!"); return; }
+    let dateTime = document.getElementById('meetingDateTime').value;
+    let duration = document.getElementById('meetingDuration').value;
+    let type = document.getElementById('meetingType').value;
+    let mom = document.getElementById('meetingMom').value.trim() || "No MOM";
+    if (!dateTime || !duration) { showToast("Fill all fields!"); return; }
     let [date, time] = dateTime.split('T');
-    let timeFormatted = time.substring(0, 5);
     let user = users.find(u => u.id == userId);
-    if(!user) return;
-    meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
+    if (!user) return;
+    meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: time.substring(0,5), duration: parseInt(duration), type, mom });
     await syncMeetings();
-    document.getElementById("meetingDateTime").value = "";
-    document.getElementById("meetingDuration").value = "";
-    document.getElementById("meetingMom").value = "";
-    renderAll();
+    document.getElementById('meetingDateTime').value = '';
+    document.getElementById('meetingDuration').value = '';
+    document.getElementById('meetingMom').value = '';
+    renderUsersCards();
+    updateDashboardAndCharts();
+    updateCounts();
     showToast(`Meeting scheduled for ${user.username}`);
 }
 
+// ========== Group Meeting ==========
+function openGroupMeetingModal() {
+    if (users.length === 0) { showToast("Add users first!"); return; }
+    let html = `<h3 class="text-xl font-bold mb-4">👥 Group Meeting</h3><select id="groupType" class="form-input"><option value="Team">Team</option><option value="Individual">Individual</option></select><input type="datetime-local" id="groupDateTime" class="form-input"><input type="number" id="groupDuration" placeholder="Duration" class="form-input"><div class="border rounded-lg p-2 max-h-48 overflow-y-auto my-3">${users.map(u => `<label class="flex items-center gap-2 p-2"><input type="checkbox" value="${u.id}" class="userCheck"> ${escapeHtml(u.username)}</label>`).join('')}</div><textarea id="groupMom" rows="3" placeholder="MOM" class="form-input"></textarea><button onclick="saveGroupMeeting()" class="btn-primary w-full">Save</button><button onclick="closeGroupMeetingModal()" class="btn-primary w-full mt-2" style="background:#6b7280;">Cancel</button>`;
+    document.getElementById('groupMeetingModalBody').innerHTML = html;
+    document.getElementById('groupMeetingModal').style.display = 'flex';
+}
+
+function closeGroupMeetingModal() { document.getElementById('groupMeetingModal').style.display = 'none'; }
+
+async function saveGroupMeeting() {
+    let checks = document.querySelectorAll('#groupMeetingModalBody .userCheck:checked');
+    if (checks.length === 0) { showToast("Select at least one user!"); return; }
+    let dateTime = document.getElementById('groupDateTime').value;
+    let duration = document.getElementById('groupDuration').value;
+    let type = document.getElementById('groupType').value;
+    let mom = document.getElementById('groupMom').value.trim() || "No MOM";
+    if (!dateTime || !duration) { showToast("Fill date/time!"); return; }
+    let [date, time] = dateTime.split('T');
+    for (let cb of checks) {
+        let user = users.find(u => u.id == parseInt(cb.value));
+        if (user) meetings.push({ id: Date.now() + Math.random(), userId: user.id, userName: user.username, date, time: time.substring(0,5), duration: parseInt(duration), type, mom });
+    }
+    await syncMeetings();
+    closeGroupMeetingModal();
+    renderUsersCards();
+    updateDashboardAndCharts();
+    updateCounts();
+    showToast(`Group meeting saved for ${checks.length} users`);
+}
+
+// ========== Tasks ==========
+function toggleTaskFields() { let type = document.getElementById('itemType').value; document.getElementById('taskPriority').style.display = type === 'task' ? 'block' : 'none'; document.getElementById('reminderDesc').style.display = type === 'reminder' ? 'block' : 'none'; }
+
 async function addTaskOrReminder() {
-    let type = document.getElementById("itemType").value;
-    let title = document.getElementById("itemTitle").value.trim();
-    let date = document.getElementById("itemDate").value;
-    let time = document.getElementById("itemTime").value;
-    if(!title || !date || !time) { showToast("Fill all fields!", "error"); return; }
-    if(type === "task") {
-        let priority = document.getElementById("taskPriority").value;
-        tasks.push({ id: Date.now(), type: "task", title, date, time, priority, completed: false });
+    let type = document.getElementById('itemType').value;
+    let title = document.getElementById('itemTitle').value.trim();
+    let date = document.getElementById('itemDate').value;
+    let time = document.getElementById('itemTime').value;
+    if (!title || !date || !time) { showToast("Fill all fields!"); return; }
+    if (type === 'task') {
+        let priority = document.getElementById('taskPriority').value;
+        tasks.push({ id: Date.now(), type: 'task', title, date, time, priority, completed: false });
     } else {
-        let description = document.getElementById("reminderDesc").value.trim() || "No description";
-        tasks.push({ id: Date.now(), type: "reminder", title, date, time, description, completed: false });
+        let desc = document.getElementById('reminderDesc').value.trim() || "No description";
+        tasks.push({ id: Date.now(), type: 'reminder', title, date, time, description: desc, completed: false });
     }
     await syncTasks();
     renderTasksAndReminders();
-    document.getElementById("itemTitle").value = "";
-    document.getElementById("itemDate").value = "";
-    document.getElementById("itemTime").value = "";
-    document.getElementById("reminderDesc").value = "";
-    showToast(`${type === "task" ? "Task" : "Reminder"} added`);
+    document.getElementById('itemTitle').value = '';
+    document.getElementById('itemDate').value = '';
+    document.getElementById('itemTime').value = '';
+    document.getElementById('reminderDesc').value = '';
+    showToast(`${type} added`);
 }
 
 async function deleteTask(id) {
-    if(confirm("Delete?")) {
-        tasks = tasks.filter(t => t.id !== id);
-        await syncTasks();
-        renderTasksAndReminders();
-        showToast("Deleted");
-    }
+    if (confirm("Delete?")) { tasks = tasks.filter(t => t.id !== id); await syncTasks(); renderTasksAndReminders(); showToast("Deleted"); }
 }
 
 async function markTaskComplete(id) {
     let item = tasks.find(t => t.id === id);
-    if(item) {
-        item.completed = true;
-        await syncTasks();
-        renderTasksAndReminders();
-        showToast(`"${item.title}" completed`);
-    }
+    if (item) { item.completed = true; await syncTasks(); renderTasksAndReminders(); showToast(`"${item.title}" completed`); }
 }
 
-function openAddUserModal() {
-    document.getElementById("addUserModal").style.display = "flex";
-    document.getElementById("newUsername").value = "";
-}
-function closeAddUserModal() { document.getElementById("addUserModal").style.display = "none"; }
-function closeAddUserModalOnOutside(event) { if(event.target === document.getElementById("addUserModal")) closeAddUserModal(); }
-
-function openScheduleModal(userId) {
-    let user = users.find(u => u.id === userId);
-    if(!user) return;
-    document.getElementById("scheduleModalTitle").innerHTML = `<i class="fas fa-calendar-plus mr-1 text-emerald-600"></i>Schedule for ${escapeHtml(user.username)}`;
-    
-    let html = `
-        <div class="space-y-3">
-            <div><input type="datetime-local" id="scheduleDateTime" class="w-full border rounded-lg p-2 text-sm"></div>
-            <div><input type="number" id="scheduleDuration" placeholder="Duration (min)" class="w-full border rounded-lg p-2 text-sm"></div>
-            <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
-                <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
-                <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
-                <option value="Project Review">📁 Project Review</option>
-                <option value="Strategic">🎯 Strategic</option>
-                <option value="One on One">🤝 One on One</option>
-            </select></div>
-            <div><textarea id="scheduleMom" rows="2" placeholder="MOM..." class="w-full border rounded-lg p-2 text-sm"></textarea></div>
-            <div class="flex gap-2"><button onclick="saveScheduledMeeting(${userId})" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm">Save</button><button onclick="closeScheduleModal()" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm">Cancel</button></div>
-        </div>
-    `;
-    document.getElementById("scheduleModalBody").innerHTML = html;
-    document.getElementById("scheduleModal").style.display = "flex";
+function renderTasksAndReminders() {
+    let tasksDiv = document.getElementById('tasksListContainer');
+    let remindersDiv = document.getElementById('remindersListContainer');
+    if (!tasksDiv) return;
+    let taskList = tasks.filter(t => t.type === 'task');
+    let reminderList = tasks.filter(t => t.type === 'reminder');
+    document.getElementById('taskCount').innerText = taskList.length;
+    document.getElementById('reminderCount').innerText = reminderList.length;
+    let today = new Date().toISOString().slice(0,10);
+    tasksDiv.innerHTML = taskList.length ? taskList.map(t => `<div class="user-card mb-2 ${t.completed ? 'opacity-50' : ''}"><div class="flex-between"><div><div class="font-bold">✅ ${escapeHtml(t.title)} ${t.date === today ? '<span class="text-red-500 text-xs">🔔</span>' : ''}</div><div class="text-xs text-gray-500">${t.date} ${t.time}</div></div><div class="flex">${!t.completed ? `<button onclick="markTaskComplete(${t.id})" class="text-green-500"><i class="fas fa-check"></i></button>` : ''}<button onclick="deleteTask(${t.id})" class="text-red-500"><i class="fas fa-trash"></i></button></div></div></div>`).join('') : '<div class="text-center text-gray-400 py-5">No tasks</div>';
+    remindersDiv.innerHTML = reminderList.length ? reminderList.map(r => `<div class="user-card mb-2"><div><div class="font-bold">⏰ ${escapeHtml(r.title)} ${r.date === today ? '<span class="text-red-500 text-xs">🔔</span>' : ''}</div><div class="text-xs text-gray-500">${r.date} ${r.time}</div><div class="text-xs text-gray-500 mt-1">📝 ${escapeHtml(r.description || '')}</div></div></div>`).join('') : '<div class="text-center text-gray-400 py-5">No reminders</div>';
 }
 
-async function saveScheduledMeeting(userId) {
-    let dateTime = document.getElementById("scheduleDateTime").value;
-    let duration = document.getElementById("scheduleDuration").value;
-    let type = document.getElementById("scheduleType").value;
-    let mom = document.getElementById("scheduleMom").value.trim() || "No MOM";
-    if(!dateTime) { showToast("Select date & time!", "error"); return; }
-    if(!duration) { showToast("Enter duration!", "error"); return; }
-    let [date, time] = dateTime.split('T');
-    let timeFormatted = time.substring(0, 5);
-    let user = users.find(u => u.id === userId);
-    if(!user) return;
-    meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
-    await syncMeetings();
-    closeScheduleModal();
-    renderAll();
-    showToast(`Meeting scheduled for ${user.username}`);
-}
-
-function closeScheduleModal() { document.getElementById("scheduleModal").style.display = "none"; }
-function closeScheduleModalOnOutside(event) { if(event.target === document.getElementById("scheduleModal")) closeScheduleModal(); }
-
-function closeModal() { document.getElementById("userModal").style.display = "none"; }
-function closeModalOnOutside(event) { if(event.target === document.getElementById("userModal")) closeModal(); }
-
-function openEditUserModal(userId) {
-    let user = users.find(u => u.id === userId);
-    if(!user) return;
-    currentEditUserId = userId;
-    
-    let modalHtml = `
-        <div class="space-y-3">
-            <div><input type="text" id="editUsername" value="${escapeHtml(user.username)}" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><input type="email" id="editEmail" value="${escapeHtml(user.email || '')}" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div class="flex gap-2 pt-2"><button onclick="saveEditedUser()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg">Save</button><button onclick="closeEditUserModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div>
-        </div>
-    `;
-    document.getElementById("editUserModalBody").innerHTML = modalHtml;
-    document.getElementById("editUserModal").style.display = "flex";
-}
-
-async function saveEditedUser() {
-    let newUsername = document.getElementById("editUsername").value.trim();
-    let newEmail = document.getElementById("editEmail").value.trim();
-    if(!newUsername) { showToast("Username required!", "error"); return; }
-    let userIndex = users.findIndex(u => u.id === currentEditUserId);
-    if(userIndex !== -1) {
-        users[userIndex].username = newUsername;
-        users[userIndex].email = newEmail;
-        await syncUsers();
-        meetings.forEach(m => { if(m.userId === currentEditUserId) m.userName = newUsername; });
-        await syncMeetings();
-        renderAll();
-        showToast("User updated");
-    }
-    closeEditUserModal();
-}
-
-function closeEditUserModal() { document.getElementById("editUserModal").style.display = "none"; }
-function closeEditUserModalOnOutside(event) { if(event.target === document.getElementById("editUserModal")) closeEditUserModal(); }
-
-function showUserDetails(userId) {
-    let user = users.find(u => u.id === userId);
-    let userMeetings = meetings.filter(m => m.userId === userId);
-    document.getElementById("modalTitle").innerHTML = `<i class="fas fa-user mr-1 text-emerald-600"></i>${escapeHtml(user.username)} - Meetings (${userMeetings.length})`;
-    
-    if(userMeetings.length === 0) {
-        document.getElementById("modalBody").innerHTML = `<div class="text-center text-gray-400 py-6">No meetings yet.</div>`;
-    } else {
-        let meetingsHtml = `<div class="space-y-3 max-h-96 overflow-y-auto">`;
-        for(let m of userMeetings) {
-            meetingsHtml += `
-                <div class="border-b border-gray-100 pb-3 mb-2">
-                    <div class="flex justify-between items-start">
-                        <div><div class="font-semibold">${m.date} - ${m.time}</div><div class="text-xs text-gray-500">${m.duration} min</div><div class="text-xs bg-emerald-100 px-2 py-0.5 rounded-full">${m.type}</div></div>
-                        <button onclick="deleteMeeting(${m.id})" class="text-red-400"><i class="fas fa-trash-alt"></i></button>
-                    </div>
-                    <div class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">📝 ${escapeHtml(m.mom.substring(0,100))}${m.mom.length>100?'...':''}</div>
-                </div>
-            `;
-        }
-        meetingsHtml += `</div>`;
-        document.getElementById("modalBody").innerHTML = meetingsHtml;
-    }
-    document.getElementById("userModal").style.display = "flex";
-}
-
-async function deleteMeeting(meetingId) {
-    if(confirm("Delete this meeting?")) {
-        meetings = meetings.filter(m => m.id !== meetingId);
-        await syncMeetings();
-        closeModal();
-        renderAll();
-        showToast("Meeting deleted");
-    }
-}
-
-// ========== جلسه گروهی ==========
-function openGroupMeetingModal() {
-    if(users.length === 0) {
-        showToast("Please add users first!", "error");
-        return;
-    }
-    let html = `
-        <div class="space-y-3">
-            <div><select id="groupMeetingType" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
-                <option value="Team">👥 Team</option><option value="Individual">👤 Individual</option>
-                <option value="Disciplinary">⚖️ Disciplinary</option>
-                <option value="CLF">📊 CLF</option>
-                <option value="Project Review">📁 Project Review</option>
-                <option value="Strategic">🎯 Strategic</option><option value="One on One">🤝 One on One</option>
-            </select></div>
-            <div><input type="datetime-local" id="groupMeetingDateTime" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><input type="number" id="groupMeetingDuration" placeholder="Duration (minutes)" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><div class="flex justify-between items-center mb-2"><label>Select Employees</label><button onclick="toggleSelectAllUsers()" class="text-blue-600 text-sm">Select All</button></div>
-            <div class="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1 bg-gray-50" id="usersChecklistContainer">
-                ${users.map(user => `<div class="flex items-center gap-2 p-1.5 rounded-lg bg-white"><input type="checkbox" value="${user.id}" class="group-checkbox"> <span>${escapeHtml(user.username)}</span></div>`).join('')}
-            </div></div>
-            <div><textarea id="groupMeetingMom" rows="2" placeholder="Minutes of Meeting..." class="w-full border border-gray-300 rounded-lg p-2 text-sm"></textarea></div>
-            <div class="flex gap-2 pt-2"><button onclick="saveGroupMeeting()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg">Save</button><button onclick="closeGroupMeetingModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div>
-        </div>
-    `;
-    document.getElementById("groupMeetingModalBody").innerHTML = html;
-    document.getElementById("groupMeetingModal").style.display = "flex";
-}
-
-function toggleSelectAllUsers() {
-    let checkboxes = document.querySelectorAll('#usersChecklistContainer input[type="checkbox"]');
-    let allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    checkboxes.forEach(cb => cb.checked = !allChecked);
-}
-
-async function saveGroupMeeting() {
-    let selectedCheckboxes = document.querySelectorAll('#usersChecklistContainer input[type="checkbox"]:checked');
-    if(selectedCheckboxes.length === 0) { showToast("Please select at least one person!", "error"); return; }
-    let dateTime = document.getElementById("groupMeetingDateTime").value;
-    let duration = document.getElementById("groupMeetingDuration").value;
-    let type = document.getElementById("groupMeetingType").value;
-    let mom = document.getElementById("groupMeetingMom").value.trim() || "No minutes";
-    if(!dateTime) { showToast("Please specify date and time!", "error"); return; }
-    if(!duration) { showToast("Please enter duration!", "error"); return; }
-    let [date, time] = dateTime.split('T');
-    let timeFormatted = time.substring(0, 5);
-    let durationNum = parseInt(duration);
-    let addedCount = 0;
-    for(let cb of selectedCheckboxes) {
-        let userId = parseInt(cb.value);
-        let user = users.find(u => u.id === userId);
-        if(user) {
-            meetings.push({ id: Date.now() + Math.random(), userId: user.id, userName: user.username, date: date, time: timeFormatted, duration: durationNum, type: type, mom: mom });
-            addedCount++;
-        }
-    }
-    await syncMeetings();
-    closeGroupMeetingModal();
-    renderAll();
-    showToast(`${type} meeting scheduled for ${addedCount} people`);
-}
-
-function closeGroupMeetingModal() { document.getElementById("groupMeetingModal").style.display = "none"; }
-function closeGroupMeetingModalOnOutside(event) { if(event.target === document.getElementById("groupMeetingModal")) closeGroupMeetingModal(); }
-
-// ========== آپلود اکسل (ذخیره مستقیم در Supabase) ==========
+// ========== Excel Upload to Supabase ==========
 async function handleExcelUpload(input) {
     let file = input.files[0];
-    if(!file) return;
+    if (!file) return;
     let reader = new FileReader();
     reader.onload = async function(e) {
-        let data = new Uint8Array(e.target.result);
-        let workbook = XLSX.read(data, { type: 'array' });
-        let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        let rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+        let workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        let rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: "" });
         let added = 0;
-        let newUsers = [];
-        
-        for(let i = 0; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
             let row = rows[i];
-            if(!row || row.length === 0) continue;
+            if (!row || row.length === 0) continue;
             let username = row[0] ? String(row[0]).trim() : "";
-            if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
-            if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
+            if (i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
+            if (username && !users.some(u => u.username === username)) {
                 let newUser = { id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" };
                 users.push(newUser);
-                newUsers.push(newUser);
+                await supabase.from('users').upsert(newUser, { onConflict: 'id' });
                 added++;
             }
         }
-        
-        if(added > 0) { 
-            // ذخیره در Supabase
-            for(let u of newUsers) {
-                try {
-                    await supabase.from('users').upsert(u, { onConflict: 'id' });
-                } catch(e) { console.warn(e); }
-            }
-            saveUsersToStorage();
-            renderAll(); 
-            showToast(`${added} user(s) added to Supabase!`); 
-        } else { 
-            showToast("No valid users found", "error"); 
-        }
+        if (added > 0) { renderAll(); showToast(`${added} user(s) added to Supabase!`); }
+        else showToast("No valid users found");
         input.value = '';
     };
     reader.readAsArrayBuffer(file);
 }
 
-// ========== آمار و چارت ==========
-function updateUserCounts() {
-    document.getElementById("dashUsers") && (document.getElementById("dashUsers").innerText = users.length);
-    document.getElementById("userCountBadge") && (document.getElementById("userCountBadge").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
-    document.getElementById("userListCount") && (document.getElementById("userListCount").innerText = users.length + " user" + (users.length !== 1 ? "s" : ""));
-    document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetings.length);
+// ========== Dashboard & Charts ==========
+function updateCounts() {
+    document.getElementById('dashUsers') && (document.getElementById('dashUsers').innerText = users.length);
+    document.getElementById('dashMeetings') && (document.getElementById('dashMeetings').innerText = meetings.length);
 }
 
 function updateDashboardAndCharts() {
-    let meetingsCount = meetings.length;
-    document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetingsCount);
     let uniqueTypes = new Set(meetings.map(m => m.type)).size;
-    document.getElementById("dashTypes") && (document.getElementById("dashTypes").innerText = uniqueTypes);
-    let avg = meetingsCount ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetingsCount) : 0;
-    document.getElementById("dashAvg") && (document.getElementById("dashAvg").innerText = avg);
-    
-    let typeCount = {};
-    meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
-    let labels = Object.keys(typeCount);
-    let data = Object.values(typeCount);
-    let colors = ["#10b981", "#34d399", "#6ee7b7", "#059669", "#0284c7", "#38bdf8", "#7dd3fc", "#0ea5e9"];
-    
-    let ctx1 = document.getElementById("typeChart")?.getContext("2d");
-    let ctx2 = document.getElementById("reportChart")?.getContext("2d");
-    if(ctx1) { if(chart1) chart1.destroy(); chart1 = new Chart(ctx1, { type: "bar", data: { labels: labels, datasets: [{ label: "Meetings", data: data, backgroundColor: colors, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: true } }); }
-    if(ctx2) { if(chart2) chart2.destroy(); chart2 = new Chart(ctx2, { type: "pie", data: { labels: labels, datasets: [{ data: data, backgroundColor: colors }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } }); }
-    
-    let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1 flex gap-1 text-[11px]"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1"></i><span>${m.date} ${m.time} - ${m.userName}: ${m.type}</span></div>`).join('');
-    document.getElementById("recentLogs") && (document.getElementById("recentLogs").innerHTML = recentHtml || "<div class='text-gray-400 text-xs'>No recent meetings</div>");
+    document.getElementById('dashTypes') && (document.getElementById('dashTypes').innerText = uniqueTypes);
+    let avg = meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0;
+    document.getElementById('dashAvg') && (document.getElementById('dashAvg').innerText = avg);
+    let typeCount = {}; meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
+    let ctx1 = document.getElementById('typeChart')?.getContext('2d');
+    let ctx2 = document.getElementById('reportChart')?.getContext('2d');
+    if (ctx1) { if (chart1) chart1.destroy(); chart1 = new Chart(ctx1, { type: 'bar', data: { labels: Object.keys(typeCount), datasets: [{ label: 'Meetings', data: Object.values(typeCount), backgroundColor: ['#10b981','#34d399','#6ee7b7','#059669'] }] }, options: { responsive: true } }); }
+    if (ctx2) { if (chart2) chart2.destroy(); chart2 = new Chart(ctx2, { type: 'pie', data: { labels: Object.keys(typeCount), datasets: [{ data: Object.values(typeCount), backgroundColor: ['#10b981','#34d399','#6ee7b7','#059669'] }] }, options: { responsive: true } }); }
+    let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1">${m.date} ${m.time} - ${m.userName}: ${m.type}</div>`).join('');
+    document.getElementById('recentLogs') && (document.getElementById('recentLogs').innerHTML = recentHtml || "No recent meetings");
 }
 
-function toggleTaskReminderFields() {
-    let type = document.getElementById("itemType").value;
-    let prioritySelect = document.getElementById("taskPriority");
-    let reminderDesc = document.getElementById("reminderDesc");
-    if(prioritySelect) prioritySelect.style.display = type === "task" ? "block" : "none";
-    if(reminderDesc) reminderDesc.style.display = type === "reminder" ? "block" : "none";
+function renderAll() {
+    renderUserSelect();
+    renderUsersList();
+    renderUsersCards();
+    renderTasksAndReminders();
+    updateDashboardAndCharts();
+    updateCounts();
 }
 
-// ========== توابع خروجی ==========
-function downloadFile(content, filename) {
-    let blob = new Blob([content], { type: "application/json" });
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-}
+// ========== Export ==========
+function downloadFile(content, name) { let a = document.createElement('a'); let blob = new Blob([content], { type: 'application/json' }); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
+function exportUsersReport() { downloadFile(JSON.stringify(users, null, 2), 'users.json'); showToast("Exported"); }
+function exportMeetingsReport() { downloadFile(JSON.stringify(meetings, null, 2), 'meetings.json'); showToast("Exported"); }
+function exportTasksReport() { downloadFile(JSON.stringify(tasks, null, 2), 'tasks.json'); showToast("Exported"); }
+function exportFullJSON() { downloadFile(JSON.stringify({ users, meetings, tasks, exportDate: new Date().toISOString() }, null, 2), 'backup.json'); showToast("Exported"); }
 
-function exportMeetingsReport() {
-    let report = meetings.map(m => ({ User: m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
-    downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("Meetings exported");
-}
-function exportUsersReport() {
-    let report = users.map(u => ({ Username: u.username, Email: u.email, Meetings: meetings.filter(m => m.userId === u.id).length }));
-    downloadFile(JSON.stringify(report, null, 2), `users_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("Users exported");
-}
-function exportTasksReport() {
-    let report = tasks.map(t => ({ Type: t.type, Title: t.title, Date: t.date, Time: t.time, Completed: t.completed }));
-    downloadFile(JSON.stringify(report, null, 2), `tasks_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("Tasks exported");
-}
-function exportFullReport() {
-    let typeCount = {};
-    meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
-    let report = { exportDate: new Date().toISOString(), summary: { totalUsers: users.length, totalMeetings: meetings.length, totalTasks: tasks.length, meetingTypes: typeCount }, users: users, meetings: meetings, tasks: tasks };
-    downloadFile(JSON.stringify(report, null, 2), `full_report_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("Full report exported");
-}
-function exportStatistics() {
-    let stats = { date: new Date().toISOString(), users: users.length, meetings: meetings.length, avgDuration: meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0, completedTasks: tasks.filter(t => t.completed).length };
-    downloadFile(JSON.stringify(stats, null, 2), `stats_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("Statistics exported");
-}
-function exportFullJSON() {
-    let exportData = { users: users, meetings: meetings, tasks: tasks, exportDate: new Date().toISOString() };
-    downloadFile(JSON.stringify(exportData, null, 2), `meeting_manager_backup_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("Data exported");
-}
-function importJSON(input) {
-    let file = input.files[0];
-    if(!file) return;
-    let reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            let imported = JSON.parse(e.target.result);
-            if(imported.users) users = imported.users;
-            if(imported.meetings) meetings = imported.meetings;
-            if(imported.tasks) tasks = imported.tasks;
-            await syncUsers(); await syncMeetings(); await syncTasks();
-            renderAll();
-            showToast("Data imported successfully");
-        } catch(err) { showToast("Invalid JSON!", "error"); }
-        input.value = '';
-    };
-    reader.readAsText(file);
-}
-
-// ========== شروع برنامه ==========
-document.addEventListener('DOMContentLoaded', function() {
-    // اضافه کردن event listener به لینک‌های سایدبار
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            const tabId = link.getAttribute('data-tab');
-            if (tabId) {
-                switchTab(tabId);
-            }
-        });
-    });
-    
-    // مقداردهی اولیه
-    init();
-});
-
+// ========== Init ==========
 async function init() {
+    toggleTaskFields();
     await loadUsers();
     await loadMeetings();
     await loadTasks();
     renderAll();
-    toggleTaskReminderFields();
-    // فعال کردن تب dashboard به صورت پیش‌فرض
-    switchTab('dashboard');
 }
+
+init();
 </script>
 </body>
 </html>

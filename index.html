@@ -271,14 +271,8 @@ const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
 // ایجاد کلاینت - فقط یک بار
-let supabase;
-try {
-    supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('✅ Supabase connected');
-} catch(e) {
-    console.error('Supabase error:', e);
-    supabase = null;
-}
+let supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('✅ Supabase connected');
 
 let users = [], meetings = [], tasks = [];
 let chart1 = null, chart2 = null;
@@ -295,7 +289,7 @@ function showToast(msg) {
 function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
 function getInitial(n) { return n ? n.charAt(0).toUpperCase() : "?"; }
 
-// ========== Menu - مهمترین بخش ==========
+// ========== Menu ==========
 document.querySelectorAll('.sidebar-link').forEach(link => {
     link.addEventListener('click', function(e) {
         e.preventDefault();
@@ -307,10 +301,7 @@ document.querySelectorAll('.sidebar-link').forEach(link => {
         
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         const activeTab = document.getElementById(`${tabName}-tab`);
-        if (activeTab) {
-            activeTab.classList.add('active');
-            console.log('Tab activated:', tabName);
-        }
+        if (activeTab) activeTab.classList.add('active');
         
         if (tabName === 'users') renderUsersList();
         if (tabName === 'meetings') renderUsersCards();
@@ -322,90 +313,66 @@ console.log('Menu listeners added');
 
 // ========== Load from Supabase ==========
 async function loadUsers() {
-    if (!supabase) {
-        console.error('Supabase not available');
-        useSampleUsers();
-        return;
-    }
-    
     try {
         console.log('Loading users from Supabase...');
         const { data, error } = await supabase.from('users').select('*');
-        
-        if (error) {
-            console.error('Supabase error:', error);
-            useSampleUsers();
-        } else if (data && data.length > 0) {
+        if (error) throw error;
+        if (data && data.length > 0) {
             users = data;
-            console.log(`✅ Loaded ${users.length} users from Supabase`);
         } else {
-            useSampleUsers();
+            users = [
+                { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
+                { id: 2, username: "سارا محمدی", email: "sara@example.com" },
+                { id: 3, username: "رضا کریمی", email: "reza@example.com" }
+            ];
+            await syncUsers();
         }
+        console.log(`✅ Loaded ${users.length} users`);
         renderUsersList();
         renderUsersCards();
         renderUserSelect();
         updateCounts();
-    } catch(e) {
-        console.error('Connection error:', e);
-        useSampleUsers();
-    }
-}
-
-function useSampleUsers() {
-    users = [
-        { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
-        { id: 2, username: "سارا محمدی", email: "sara@example.com" },
-        { id: 3, username: "رضا کریمی", email: "reza@example.com" }
-    ];
-    console.log('Using sample users');
+    } catch(e) { console.error('Error loading users:', e); }
 }
 
 async function loadMeetings() {
-    if (!supabase) return;
     try {
         const { data, error } = await supabase.from('meetings').select('*');
-        if (!error && data) meetings = data;
+        if (error) throw error;
+        meetings = data || [];
+        console.log(`✅ Loaded ${meetings.length} meetings`);
         renderUsersCards();
         updateDashboardAndCharts();
         updateCounts();
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error('Error loading meetings:', e); }
 }
 
 async function loadTasks() {
-    if (!supabase) return;
     try {
         const { data, error } = await supabase.from('tasks').select('*');
-        if (!error && data) tasks = data;
+        if (error) throw error;
+        tasks = data || [];
         if (tasks.length === 0) {
             let today = new Date().toISOString().slice(0,10);
             tasks = [
                 { id: 1, type: "task", title: "Review reports", date: today, time: "14:00", priority: "high", completed: false },
                 { id: 2, type: "reminder", title: "Team meeting", date: today, time: "09:30", description: "Prepare slides", completed: false }
             ];
+            await syncTasks();
         }
+        console.log(`✅ Loaded ${tasks.length} tasks`);
         renderTasksAndReminders();
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error('Error loading tasks:', e); }
 }
 
 async function syncUsers() {
-    if (!supabase) return;
-    for(let u of users) {
-        await supabase.from('users').upsert(u, { onConflict: 'id' });
-    }
+    for(let u of users) await supabase.from('users').upsert(u, { onConflict: 'id' });
 }
-
 async function syncMeetings() {
-    if (!supabase) return;
-    for(let m of meetings) {
-        await supabase.from('meetings').upsert(m, { onConflict: 'id' });
-    }
+    for(let m of meetings) await supabase.from('meetings').upsert(m, { onConflict: 'id' });
 }
-
 async function syncTasks() {
-    if (!supabase) return;
-    for(let t of tasks) {
-        await supabase.from('tasks').upsert(t, { onConflict: 'id' });
-    }
+    for(let t of tasks) await supabase.from('tasks').upsert(t, { onConflict: 'id' });
 }
 
 // ========== User CRUD ==========
@@ -416,15 +383,11 @@ async function saveNewUser() {
     let username = document.getElementById('newUsername').value.trim();
     if (!username) { showToast("Username required!"); return; }
     if (users.some(u => u.username === username)) { showToast("Username exists!"); return; }
-    
     let newUser = { id: Date.now(), username: username, email: "" };
     users.push(newUser);
     await syncUsers();
     closeAddUserModal();
-    renderUsersList();
-    renderUsersCards();
-    renderUserSelect();
-    updateCounts();
+    renderAll();
     showToast(`✅ User "${username}" added`);
 }
 
@@ -434,10 +397,7 @@ async function deleteUser(id) {
     meetings = meetings.filter(m => m.userId !== id);
     await syncUsers();
     await syncMeetings();
-    renderUsersList();
-    renderUsersCards();
-    renderUserSelect();
-    updateCounts();
+    renderAll();
     showToast("User deleted");
 }
 
@@ -458,9 +418,7 @@ async function addMeeting() {
     document.getElementById('meetingDateTime').value = '';
     document.getElementById('meetingDuration').value = '';
     document.getElementById('meetingMom').value = '';
-    renderUsersCards();
-    updateDashboardAndCharts();
-    updateCounts();
+    renderAll();
     showToast(`Meeting scheduled for ${user.username}`);
 }
 
@@ -470,12 +428,11 @@ function selectUserForMeeting(id) {
     showToast("Fill meeting details and click Save");
 }
 
-// ========== Render Functions ==========
+// ========== Render ==========
 function renderUsersList() {
     let container = document.getElementById('usersListContainer');
     if (!container) return;
     if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
-    
     container.innerHTML = users.map(u => `
         <div class="user-card">
             <div class="flex"><div class="avatar">${getInitial(u.username)}</div>
@@ -489,7 +446,6 @@ function renderUsersCards() {
     let container = document.getElementById('usersCardsContainer');
     if (!container) return;
     if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
-    
     container.innerHTML = users.map(u => `
         <div class="user-card">
             <div class="flex"><div class="avatar">${getInitial(u.username)}</div><div><div class="font-bold">${escapeHtml(u.username)}</div><div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} meetings</div></div></div>
@@ -523,9 +479,7 @@ function openGroupMeetingModal() {
     document.getElementById('groupMeetingModalBody').innerHTML = html;
     document.getElementById('groupMeetingModal').style.display = 'flex';
 }
-
 function closeGroupMeetingModal() { document.getElementById('groupMeetingModal').style.display = 'none'; }
-
 async function saveGroupMeeting() {
     let checks = document.querySelectorAll('#groupMeetingModalBody .userCheck:checked');
     if (checks.length === 0) { showToast("Select at least one user!"); return; }
@@ -541,15 +495,12 @@ async function saveGroupMeeting() {
     }
     await syncMeetings();
     closeGroupMeetingModal();
-    renderUsersCards();
-    updateDashboardAndCharts();
-    updateCounts();
+    renderAll();
     showToast(`Group meeting saved for ${checks.length} users`);
 }
 
 // ========== Tasks Functions ==========
 function toggleTaskFields() { let type = document.getElementById('itemType').value; document.getElementById('taskPriority').style.display = type === 'task' ? 'block' : 'none'; document.getElementById('reminderDesc').style.display = type === 'reminder' ? 'block' : 'none'; }
-
 async function addTaskOrReminder() {
     let type = document.getElementById('itemType').value;
     let title = document.getElementById('itemTitle').value.trim();
@@ -571,15 +522,8 @@ async function addTaskOrReminder() {
     document.getElementById('reminderDesc').value = '';
     showToast(`${type} added`);
 }
-
-async function deleteTask(id) {
-    if (confirm("Delete?")) { tasks = tasks.filter(t => t.id !== id); await syncTasks(); renderTasksAndReminders(); showToast("Deleted"); }
-}
-
-async function markTaskComplete(id) {
-    let item = tasks.find(t => t.id === id);
-    if (item) { item.completed = true; await syncTasks(); renderTasksAndReminders(); showToast(`"${item.title}" completed`); }
-}
+async function deleteTask(id) { if (confirm("Delete?")) { tasks = tasks.filter(t => t.id !== id); await syncTasks(); renderTasksAndReminders(); showToast("Deleted"); } }
+async function markTaskComplete(id) { let item = tasks.find(t => t.id === id); if (item) { item.completed = true; await syncTasks(); renderTasksAndReminders(); showToast(`"${item.title}" completed`); } }
 
 // ========== Excel Upload ==========
 async function handleExcelUpload(input) {
@@ -612,7 +556,6 @@ function updateCounts() {
     document.getElementById('dashUsers') && (document.getElementById('dashUsers').innerText = users.length);
     document.getElementById('dashMeetings') && (document.getElementById('dashMeetings').innerText = meetings.length);
 }
-
 function updateDashboardAndCharts() {
     let uniqueTypes = new Set(meetings.map(m => m.type)).size;
     document.getElementById('dashTypes') && (document.getElementById('dashTypes').innerText = uniqueTypes);
@@ -626,7 +569,6 @@ function updateDashboardAndCharts() {
     let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1">${m.date} ${m.time} - ${m.userName}: ${m.type}</div>`).join('');
     document.getElementById('recentLogs') && (document.getElementById('recentLogs').innerHTML = recentHtml || "No recent meetings");
 }
-
 function renderAll() {
     renderUserSelect();
     renderUsersList();
@@ -644,15 +586,13 @@ function exportTasksReport() { downloadFile(JSON.stringify(tasks, null, 2), 'tas
 function exportFullJSON() { downloadFile(JSON.stringify({ users, meetings, tasks, exportDate: new Date().toISOString() }, null, 2), 'backup.json'); showToast("Exported"); }
 
 // ========== Init ==========
-async function init() {
+(async function init() {
     toggleTaskFields();
     await loadUsers();
     await loadMeetings();
     await loadTasks();
     renderAll();
-}
-
-init();
+})();
 </script>
 </body>
 </html>

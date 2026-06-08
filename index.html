@@ -114,7 +114,7 @@
         
         .users-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
         }
         
@@ -414,7 +414,7 @@
             <div id="users-tab" class="tab-content hidden space-y-4">
                 <div class="flex justify-between items-center flex-wrap gap-2">
                     <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-user-plus mr-2 text-emerald-600"></i>User Management</h2>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 flex-wrap">
                         <button onclick="openAddUserModal()" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-plus mr-1"></i> Add User</button>
                         <label class="bg-gradient-to-r from-blue-500 to-cyan-600 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer shadow-md"><i class="fas fa-upload mr-1"></i> Excel<input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelUpload(this)"></label>
                         <button onclick="exportFullJSON()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-download mr-1"></i> Export</button>
@@ -435,7 +435,7 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-calendar-plus mr-2 text-emerald-600"></i>Schedule Meeting</h2>
                         <button onclick="openGroupMeetingModal()" class="btn-gradient-primary text-white px-4 py-2 rounded-lg text-sm shadow-md flex items-center gap-2">
-                            <i class="fas fa-users"></i> جلسه گروهی
+                            <i class="fas fa-users"></i> Group Meeting
                         </button>
                     </div>
                     <div class="form-row">
@@ -501,7 +501,7 @@
                 
                 <div class="split-container">
                     <div class="task-column shadow-md">
-                        <div class="column-header text-sm">
+                        <div class="column-header text-sm mb-2">
                             <span><i class="fas fa-check-circle mr-1"></i>Tasks</span>
                             <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold" id="taskCount">0</span>
                         </div>
@@ -509,7 +509,7 @@
                     </div>
                     
                     <div class="reminder-column shadow-md">
-                        <div class="column-header text-sm">
+                        <div class="column-header text-sm mb-2">
                             <span><i class="fas fa-bell mr-1"></i>Reminders</span>
                             <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold" id="reminderCount">0</span>
                         </div>
@@ -549,7 +549,7 @@
 <div id="groupMeetingModal" class="modal" onclick="closeGroupMeetingModalOnOutside(event)">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-users mr-2 text-emerald-600"></i>تنظیم جلسه گروهی</h3>
+            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-users mr-2 text-emerald-600"></i>Group Meeting Setup</h3>
             <button onclick="closeGroupMeetingModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
         </div>
         <div id="groupMeetingModalBody"></div>
@@ -576,16 +576,6 @@
     </div>
 </div>
 
-<div id="editModal" class="modal" onclick="closeEditModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800">Edit Meeting</h3>
-            <button onclick="closeEditModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="editModalBody"></div>
-    </div>
-</div>
-
 <div id="addUserModal" class="modal" onclick="closeAddUserModalOnOutside(event)">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
@@ -605,7 +595,7 @@
 <div id="editUserModal" class="modal" onclick="closeEditUserModalOnOutside(event)">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800">ویرایش کاربر</h3>
+            <h3 class="text-lg font-bold text-gray-800">Edit User</h3>
             <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
         </div>
         <div id="editUserModalBody"></div>
@@ -617,8 +607,18 @@
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('✅ Supabase متصل شد');
+// جلوگیری از خطای redeclaration
+let supabaseClient = null;
+try {
+    if (typeof supabaseJs !== 'undefined') {
+        supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('✅ Supabase connected');
+    } else {
+        console.warn('Supabase JS not loaded, using localStorage fallback');
+    }
+} catch(e) {
+    console.warn('Supabase error:', e);
+}
 
 let users = [];
 let meetings = [];
@@ -659,60 +659,114 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
 }
 
-// ========== بارگذاری از Supabase ==========
+// ========== بارگذاری از Supabase (با fallback به localStorage) ==========
 async function loadUsers() {
-    let { data, error } = await supabase.from('users').select('*');
-    if (error) { console.error(error); return; }
-    if (data) users = data;
+    if (supabaseClient) {
+        let { data, error } = await supabaseClient.from('users').select('*');
+        if (!error && data && data.length > 0) {
+            users = data;
+            renderAll();
+            return;
+        }
+    }
+    
+    // Fallback: load from localStorage
+    let stored = localStorage.getItem('meeting_manager_users');
+    if (stored) {
+        users = JSON.parse(stored);
+    }
     if (users.length === 0) {
         users = [
-            { id: 1, username: "احمد", email: "ahmad@example.com" },
-            { id: 2, username: "سارا", email: "sara@example.com" },
-            { id: 3, username: "رضا", email: "reza@example.com" }
+            { id: 1, username: "Ahmad", email: "ahmad@example.com" },
+            { id: 2, username: "Sara", email: "sara@example.com" },
+            { id: 3, username: "Reza", email: "reza@example.com" }
         ];
-        await syncUsers();
+        saveUsersToStorage();
     }
     renderAll();
 }
 
 async function loadMeetings() {
-    let { data, error } = await supabase.from('meetings').select('*');
-    if (error) { console.error(error); return; }
-    if (data) meetings = data;
+    if (supabaseClient) {
+        let { data, error } = await supabaseClient.from('meetings').select('*');
+        if (!error && data && data.length > 0) {
+            meetings = data;
+            renderAll();
+            return;
+        }
+    }
+    
+    let stored = localStorage.getItem('meeting_manager_meetings');
+    if (stored) {
+        meetings = JSON.parse(stored);
+    } else {
+        meetings = [];
+    }
     renderAll();
 }
 
 async function loadTasks() {
-    let { data, error } = await supabase.from('tasks').select('*');
-    if (error) { console.error(error); return; }
-    if (data) tasks = data;
+    if (supabaseClient) {
+        let { data, error } = await supabaseClient.from('tasks').select('*');
+        if (!error && data && data.length > 0) {
+            tasks = data;
+            renderTasksAndReminders();
+            return;
+        }
+    }
+    
+    let stored = localStorage.getItem('meeting_manager_tasks');
+    if (stored) {
+        tasks = JSON.parse(stored);
+    }
     if (tasks.length === 0) {
         let today = new Date().toISOString().slice(0,10);
         tasks = [
             { id: 1, type: "task", title: "Review reports", date: today, time: "14:00", priority: "high", completed: false },
             { id: 2, type: "reminder", title: "Team meeting", date: today, time: "09:30", description: "Prepare slides", completed: false }
         ];
-        await syncTasks();
+        saveTasksToStorage();
     }
     renderTasksAndReminders();
 }
 
-// ========== ذخیره در Supabase ==========
+// ========== ذخیره در localStorage به عنوان fallback ==========
+function saveUsersToStorage() {
+    localStorage.setItem('meeting_manager_users', JSON.stringify(users));
+}
+
+function saveMeetingsToStorage() {
+    localStorage.setItem('meeting_manager_meetings', JSON.stringify(meetings));
+}
+
+function saveTasksToStorage() {
+    localStorage.setItem('meeting_manager_tasks', JSON.stringify(tasks));
+}
+
 async function syncUsers() {
-    for(let u of users) {
-        await supabase.from('users').upsert(u, { onConflict: 'id' });
+    saveUsersToStorage();
+    if (supabaseClient) {
+        for(let u of users) {
+            await supabaseClient.from('users').upsert(u, { onConflict: 'id' });
+        }
     }
 }
 
 async function syncMeetings() {
-    for(let m of meetings) {
-        await supabase.from('meetings').upsert(m, { onConflict: 'id' });
+    saveMeetingsToStorage();
+    if (supabaseClient) {
+        for(let m of meetings) {
+            await supabaseClient.from('meetings').upsert(m, { onConflict: 'id' });
+        }
     }
 }
 
 async function syncTasks() {
-    for(let t of tasks) {
-        await supabase.from('tasks').upsert(t, { onConflict: 'id' });
+    saveTasksToStorage();
+    if (supabaseClient) {
+        for(let t of tasks) {
+            await supabaseClient.from('tasks').upsert(t, { onConflict: 'id' });
+        }
     }
 }
 
@@ -758,22 +812,6 @@ function switchTab(tabId) {
     }
 }
 
-// اضافه کردن event listener به تمام لینک‌های سایدبار
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            const tabId = link.getAttribute('data-tab');
-            if (tabId) {
-                switchTab(tabId);
-            }
-        });
-    });
-    
-    // فعال کردن تب dashboard به صورت پیش‌فرض
-    switchTab('dashboard');
-});
-
 // ========== رندرها ==========
 function renderAll() { 
     renderUserSelect(); 
@@ -800,8 +838,7 @@ function renderUsersList() {
         html += `
             <div class="user-card">
                 <div class="flex items-center gap-3 mb-3">
-                    <img src="${photoUrl}" class="user-photo" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                    <div class="photo-placeholder" style="display:none">${getInitial(u.username)}</div>
+                    <div class="photo-placeholder">${getInitial(u.username)}</div>
                     <div>
                         <div class="font-bold text-gray-800">${escapeHtml(u.username)}</div>
                         ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
@@ -844,8 +881,7 @@ function renderUsersCards() {
                     <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> Details</button>
                 </div>
                 <div class="flex items-center gap-3 mb-3">
-                    <img src="${photoUrl}" class="user-photo" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                    <div class="photo-placeholder" style="display:none">${getInitial(u.username)}</div>
+                    <div class="photo-placeholder">${getInitial(u.username)}</div>
                     <div>
                         <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
                         ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
@@ -880,7 +916,6 @@ function renderTasksAndReminders() {
         let tasksHtml = '';
         for(let t of tasksList) {
             let isToday = t.date === today;
-            let completedClass = t.completed ? 'opacity-50 line-through' : '';
             tasksHtml += `
                 <div class="task-item text-sm p-2 ${t.completed ? 'bg-gray-100' : ''}">
                     <div class="flex justify-between items-start">
@@ -905,7 +940,6 @@ function renderTasksAndReminders() {
         let remindersHtml = '';
         for(let r of remindersList) {
             let isToday = r.date === today;
-            let completedClass = r.completed ? 'opacity-50 line-through' : '';
             remindersHtml += `
                 <div class="reminder-item text-sm p-2 ${r.completed ? 'bg-gray-100' : ''}">
                     <div class="flex justify-between items-start">
@@ -949,7 +983,7 @@ async function saveNewUser() {
 }
 
 async function deleteUser(userId) {
-    if(confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) {
+    if(confirm("Are you sure you want to delete this user and all their meetings?")) {
         users = users.filter(u => u.id !== userId);
         meetings = meetings.filter(m => m.userId !== userId);
         await syncUsers();
@@ -1152,25 +1186,25 @@ async function deleteMeeting(meetingId) {
 // ========== جلسه گروهی ==========
 function openGroupMeetingModal() {
     if(users.length === 0) {
-        showToast("لطفا ابتدا کاربر اضافه کنید!", "error");
+        showToast("Please add users first!", "error");
         return;
     }
     let html = `
         <div class="space-y-3">
             <div><select id="groupMeetingType" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
-                <option value="Team">👥 تیمی (Team)</option><option value="Individual">👤 انفرادی (Individual)</option>
-                <option value="Disciplinary">⚖️ تنبیهی</option>
+                <option value="Team">👥 Team</option><option value="Individual">👤 Individual</option>
+                <option value="Disciplinary">⚖️ Disciplinary</option>
                 <option value="CLF">📊 CLF</option>
-                <option value="Project Review">📁 بازبینی پروژه</option>
-                <option value="Strategic">🎯 استراتژیک</option><option value="One on One">🤝 یک به یک</option>
+                <option value="Project Review">📁 Project Review</option>
+                <option value="Strategic">🎯 Strategic</option><option value="One on One">🤝 One on One</option>
             </select></div>
             <div><input type="datetime-local" id="groupMeetingDateTime" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><input type="number" id="groupMeetingDuration" placeholder="مدت زمان (دقیقه)" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><div class="flex justify-between items-center mb-2"><label>انتخاب کارمندان</label><button onclick="toggleSelectAllUsers()" class="text-blue-600 text-sm">انتخاب همه</button></div>
+            <div><input type="number" id="groupMeetingDuration" placeholder="Duration (minutes)" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
+            <div><div class="flex justify-between items-center mb-2"><label>Select Employees</label><button onclick="toggleSelectAllUsers()" class="text-blue-600 text-sm">Select All</button></div>
             <div class="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1 bg-gray-50" id="usersChecklistContainer">
                 ${users.map(user => `<div class="flex items-center gap-2 p-1.5 rounded-lg bg-white"><input type="checkbox" value="${user.id}" class="group-checkbox"> <span>${escapeHtml(user.username)}</span></div>`).join('')}
             </div></div>
-            <div><textarea id="groupMeetingMom" rows="2" placeholder="صورتجلسه..." class="w-full border border-gray-300 rounded-lg p-2 text-sm"></textarea></div>
+            <div><textarea id="groupMeetingMom" rows="2" placeholder="Minutes of Meeting..." class="w-full border border-gray-300 rounded-lg p-2 text-sm"></textarea></div>
             <div class="flex gap-2 pt-2"><button onclick="saveGroupMeeting()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg">Save</button><button onclick="closeGroupMeetingModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div>
         </div>
     `;
@@ -1186,13 +1220,13 @@ function toggleSelectAllUsers() {
 
 async function saveGroupMeeting() {
     let selectedCheckboxes = document.querySelectorAll('#usersChecklistContainer input[type="checkbox"]:checked');
-    if(selectedCheckboxes.length === 0) { showToast("لطفا حداقل یک نفر را انتخاب کنید!", "error"); return; }
+    if(selectedCheckboxes.length === 0) { showToast("Please select at least one person!", "error"); return; }
     let dateTime = document.getElementById("groupMeetingDateTime").value;
     let duration = document.getElementById("groupMeetingDuration").value;
     let type = document.getElementById("groupMeetingType").value;
-    let mom = document.getElementById("groupMeetingMom").value.trim() || "بدون صورتجلسه";
-    if(!dateTime) { showToast("لطفا تاریخ و ساعت را مشخص کنید!", "error"); return; }
-    if(!duration) { showToast("لطفا مدت زمان را وارد کنید!", "error"); return; }
+    let mom = document.getElementById("groupMeetingMom").value.trim() || "No minutes";
+    if(!dateTime) { showToast("Please specify date and time!", "error"); return; }
+    if(!duration) { showToast("Please enter duration!", "error"); return; }
     let [date, time] = dateTime.split('T');
     let timeFormatted = time.substring(0, 5);
     let durationNum = parseInt(duration);
@@ -1208,7 +1242,7 @@ async function saveGroupMeeting() {
     await syncMeetings();
     closeGroupMeetingModal();
     renderAll();
-    showToast(`جلسه ${type} برای ${addedCount} نفر ثبت شد`);
+    showToast(`${type} meeting scheduled for ${addedCount} people`);
 }
 
 function closeGroupMeetingModal() { document.getElementById("groupMeetingModal").style.display = "none"; }
@@ -1235,7 +1269,7 @@ async function handleExcelUpload(input) {
                 added++;
             }
         }
-        if(added > 0) { await syncUsers(); renderAll(); showToast(`${added} user(s) added to Supabase`); }
+        if(added > 0) { await syncUsers(); renderAll(); showToast(`${added} user(s) added`); }
         else { showToast("No valid users found", "error"); }
         input.value = '';
     };
@@ -1275,8 +1309,10 @@ function updateDashboardAndCharts() {
 
 function toggleTaskReminderFields() {
     let type = document.getElementById("itemType").value;
-    document.getElementById("taskPriority").style.display = type === "task" ? "block" : "none";
-    document.getElementById("reminderDesc").style.display = type === "reminder" ? "block" : "none";
+    let prioritySelect = document.getElementById("taskPriority");
+    let reminderDesc = document.getElementById("reminderDesc");
+    if(prioritySelect) prioritySelect.style.display = type === "task" ? "block" : "none";
+    if(reminderDesc) reminderDesc.style.display = type === "reminder" ? "block" : "none";
 }
 
 // ========== توابع خروجی ==========
@@ -1342,15 +1378,31 @@ function importJSON(input) {
 }
 
 // ========== شروع برنامه ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // اضافه کردن event listener به لینک‌های سایدبار
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+        link.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            const tabId = link.getAttribute('data-tab');
+            if (tabId) {
+                switchTab(tabId);
+            }
+        });
+    });
+    
+    // مقداردهی اولیه
+    init();
+});
+
 async function init() {
     await loadUsers();
     await loadMeetings();
     await loadTasks();
     renderAll();
     toggleTaskReminderFields();
+    // فعال کردن تب dashboard به صورت پیش‌فرض
+    switchTab('dashboard');
 }
-
-init();
 </script>
 </body>
 </html>

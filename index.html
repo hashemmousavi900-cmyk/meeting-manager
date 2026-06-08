@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تست کامل Supabase - نسخه اصلاح شده</title>
+    <title>تست کامل Supabase - نسخه نهایی</title>
     <style>
         body { font-family: Tahoma; max-width: 900px; margin: 30px auto; padding: 20px; background: linear-gradient(135deg, #e0f2fe, #dcfce7); }
         .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -22,7 +22,7 @@
 </head>
 <body>
 
-<h2 style="text-align: center; color: #065f46;">📡 تست کامل Supabase (نسخه اصلاح شده)</h2>
+<h2 style="text-align: center; color: #065f46;">📡 تست کامل Supabase (نسخه نهایی)</h2>
 
 <!-- ========== بخش USERS ========== -->
 <div class="card">
@@ -35,7 +35,7 @@
     <div id="usersResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
-<!-- ========== بخش MEETINGS (اصلاح شده) ========== -->
+<!-- ========== بخش MEETINGS ========== -->
 <div class="card">
     <h3>📅 2. جدول MEETINGS (جلسات)</h3>
     <div class="flex">
@@ -61,18 +61,19 @@
     <div id="tasksResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
-<!-- ========== بخش STORAGE (عکس) ========== -->
+<!-- ========== بخش STORAGE (عکس) - اصلاح شده ========== -->
 <div class="card">
     <h3>🖼️ 4. تست Storage (عکس کاربران)</h3>
     <div class="flex-row">
-        <input type="text" id="photoUsername" placeholder="نام کاربر (مثال: احمد)" style="flex:1;">
+        <input type="text" id="photoUsername" placeholder="نام کاربر (مثال: ali.hara)" style="flex:1;">
         <button onclick="testCheckPhoto()">🔍 بررسی وجود عکس</button>
         <button onclick="testGetAllPhotos()">📂 لیست همه عکس‌ها</button>
     </div>
     <div id="storageResult" class="result">برای تست کلیک کنید...</div>
     <div class="note">
-        📁 <strong>مسیر صحیح Storage:</strong><br>
+        📁 <strong>مسیر صحیح Storage (بر اساس ساختار فعلی):</strong><br>
         باکت: <code>user-photos</code><br>
+        پوشه: <code>User-photos</code><br>
         آدرس عکس: <code>${SUPABASE_URL}/storage/v1/object/public/user-photos/User-photos/[نام کاربر].png</code>
     </div>
 </div>
@@ -88,7 +89,13 @@ const headers = {
     'Content-Type': 'application/json'
 };
 
-// ========== توابع کمکی ==========
+// ========== تابع کمکی برای ساخت آدرس عکس (اصلاح شده با پوشه User-photos) ==========
+function getPhotoUrl(username) {
+    if (!username) return null;
+    const cleanName = username.replace(/\s/g, '').toLowerCase();
+    return `${SUPABASE_URL}/storage/v1/object/public/user-photos/User-photos/${cleanName}.png`;
+}
+
 function showResult(elementId, message, isError = false) {
     const element = document.getElementById(elementId);
     element.innerHTML = message;
@@ -196,7 +203,7 @@ async function testDeleteLastUser() {
     }
 }
 
-// ========== 2. تست MEETINGS (اصلاح شده) ==========
+// ========== 2. تست MEETINGS ==========
 async function testReadMeetings() {
     const resultDiv = document.getElementById('meetingsResult');
     resultDiv.innerHTML = 'در حال خواندن جلسات...';
@@ -265,8 +272,6 @@ async function testAddMeeting() {
             mom: "این یک جلسه تستی است که از طریق API اضافه شده است."
         };
         
-        console.log('در حال ارسال:', newMeeting);
-        
         const response = await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
             method: 'POST',
             headers: headers,
@@ -275,7 +280,6 @@ async function testAddMeeting() {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('خطای سرور:', errorText);
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
         
@@ -466,7 +470,7 @@ async function testDeleteLastTask() {
     }
 }
 
-// ========== 4. تست Storage (عکس) ==========
+// ========== 4. تست Storage (عکس) - اصلاح شده با تابع getPhotoUrl ==========
 async function testCheckPhoto() {
     const username = document.getElementById('photoUsername').value.trim();
     const resultDiv = document.getElementById('storageResult');
@@ -476,12 +480,13 @@ async function testCheckPhoto() {
         return;
     }
     
-    const fileName = username.replace(/\s/g, '').toLowerCase();
-    const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/User-photos/${fileName}.png`;
+    const photoUrl = getPhotoUrl(username);
+    const cleanName = username.replace(/\s/g, '').toLowerCase();
     
     let html = `
         <strong>🔍 بررسی عکس برای کاربر "${username}":</strong><br><br>
-        📁 نام فایل: ${fileName}.png<br>
+        📁 نام فایل: ${cleanName}.png<br>
+        📂 مسیر: user-photos/User-photos/${cleanName}.png<br>
         🔗 آدرس کامل: <a href="${photoUrl}" target="_blank">${photoUrl}</a><br><br>
     `;
     
@@ -491,18 +496,19 @@ async function testCheckPhoto() {
         if (response.ok) {
             html += `<div style="background: #d1fae5; padding: 10px; border-radius: 8px;">
                 ✅ <strong>عکس یافت شد!</strong><br>
-                🖼️ عکس ${fileName}.png در Storage وجود دارد.<br>
+                🖼️ عکس ${cleanName}.png در Storage وجود دارد.<br>
                 📏 اندازه: ${response.headers.get('content-length') ? Math.round(response.headers.get('content-length') / 1024) + ' KB' : 'نامشخص'}
             </div>`;
             html += `<br><img src="${photoUrl}" style="max-width: 150px; border-radius: 50%; border: 3px solid #10b981;" onerror="this.style.display='none'">`;
+            showResult('storageResult', html, false);
         } else {
             html += `<div style="background: #fee2e2; padding: 10px; border-radius: 8px;">
                 ❌ <strong>عکس یافت نشد!</strong><br>
-                عکس ${fileName}.png در Storage وجود ندارد.<br>
-                لطفاً عکس را در مسیر <code>user-photos/${fileName}.png</code> آپلود کنید.
+                عکس ${cleanName}.png در مسیر <code>user-photos/User-photos/${cleanName}.png</code> وجود ندارد.<br>
+                لطفاً عکس را در پنل Supabase در این مسیر آپلود کنید.
             </div>`;
+            showResult('storageResult', html, true);
         }
-        showResult('storageResult', html, false);
     } catch(error) {
         html += `<div style="background: #fee2e2; padding: 10px; border-radius: 8px;">
             ❌ خطا در بررسی عکس: ${error.message}
@@ -516,9 +522,8 @@ async function testGetAllPhotos() {
     resultDiv.innerHTML = 'در حال دریافت لیست عکس‌ها...';
     
     try {
-        // این API نیاز به تنظیمات خاص دارد، از روش مستقیم استفاده می‌کنیم
-        const bucketName = 'user-photos';
-        const listUrl = `${SUPABASE_URL}/storage/v1/object/list/${bucketName}`;
+        // لیست فایل‌های داخل پوشه User-photos
+        const listUrl = `${SUPABASE_URL}/storage/v1/object/list/user-photos/User-photos`;
         
         const response = await fetch(listUrl, {
             method: 'POST',
@@ -537,12 +542,12 @@ async function testGetAllPhotos() {
         const files = await response.json();
         
         if (files.length === 0) {
-            showResult('storageResult', '📭 هیچ عکسی در پوشه user-photos وجود ندارد.', false);
+            showResult('storageResult', '📭 هیچ عکسی در مسیر user-photos/User-photos/ وجود ندارد.', false);
         } else {
-            let html = '<strong>📂 لیست عکس‌های موجود در Storage:</strong><br><br>';
+            let html = '<strong>📂 لیست عکس‌های موجود در Storage (مسیر User-photos):</strong><br><br>';
             html += `<div style="display: flex; flex-wrap: wrap; gap: 15px;">`;
             files.forEach(file => {
-                const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/User-photos/${file.name}`;
+                const photoUrl = getPhotoUrl(file.name.replace('.png', '').replace('.jpg', ''));
                 const userName = file.name.replace('.png', '').replace('.jpg', '');
                 html += `
                     <div style="text-align: center; width: 100px;">

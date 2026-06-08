@@ -1,599 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meeting Manager | Professional Edition</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>تست اتصال به Supabase</title>
     <style>
-        * { font-family: 'Poppins', sans-serif; }
-        
-        body { 
-            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
-            position: relative;
+        body {
+            font-family: 'Tahoma', sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #e0f2fe, #dcfce7);
         }
-        
-        .sidebar {
-            background: linear-gradient(180deg, #e6f7ec 0%, #d1fae5 100%);
-            border-right: 1px solid #a7f3d0;
-        }
-        
-        .sidebar-item-active {
-            background: linear-gradient(95deg, #10b981 0%, #059669 100%);
-            color: white !important;
-            border-right: 3px solid #047857;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-        }
-        
-        .sidebar-item-active i {
-            color: white !important;
-        }
-        
-        .sidebar-link { 
-            transition: all 0.2s ease; 
-            color: #065f46;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        
-        .sidebar-link i {
-            color: #059669;
-            transition: all 0.2s ease;
-        }
-        
-        .sidebar-link:hover { 
-            background: rgba(16, 185, 129, 0.15); 
-            color: #047857; 
-            transform: translateX(5px);
-        }
-        
-        .btn-gradient-primary { 
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            transition: all 0.2s;
-        }
-        
-        .btn-gradient-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px -5px rgba(5, 150, 105, 0.3);
-        }
-        
-        .btn-gradient-success { 
-            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
-            transition: all 0.2s;
-        }
-        
-        .btn-gradient-success:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px -5px rgba(2, 132, 199, 0.3);
-        }
-        
-        .stat-card { 
-            transition: all 0.2s; 
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-        
-        .stat-card:hover { 
-            transform: translateY(-3px); 
-            background: white; 
-            box-shadow: 0 15px 25px -8px rgba(0, 0, 0, 0.1);
-        }
-        
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
-        }
-        
-        .chart-container { max-height: 220px; position: relative; }
-        canvas { max-height: 200px; width: 100% !important; }
-        
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-        .form-field {
-            flex: 1;
-            min-width: 140px;
-            font-size: 13px;
-            padding: 8px 12px;
-            border-radius: 10px;
-            border: 1px solid #bae6fd;
+        .card {
             background: white;
-        }
-        
-        .users-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        
-        .user-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
             border-radius: 20px;
-            padding: 18px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.06);
-            position: relative;
-            overflow: hidden;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        
-        .user-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
+        button {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 5px;
         }
-        
-        .user-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.12);
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(5,150,105,0.3);
         }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        input, textarea {
             width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 24px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
-            padding: 24px;
-            position: relative;
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-            color: white;
-            padding: 10px 18px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
             border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 1100;
-            box-shadow: 0 8px 20px -5px rgba(0,0,0,0.2);
-            animation: slideIn 0.25s ease, fadeOut 0.4s ease 2.5s forwards;
+            box-sizing: border-box;
+        }
+        .result {
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
             font-size: 13px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
         }
-        @keyframes fadeOut {
-            to { opacity: 0; visibility: hidden; }
+        .success {
+            background: #d1fae5;
+            color: #065f46;
         }
-        
-        .split-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        h3 {
+            color: #065f46;
+            margin-bottom: 15px;
         }
-        .task-column {
-            background: #fefce8;
-            border-radius: 18px;
-            padding: 14px;
-            border: 1px solid #fde047;
+        hr {
+            margin: 20px 0;
+            border: none;
+            border-top: 1px solid #e5e7eb;
         }
-        .reminder-column {
-            background: #eff6ff;
-            border-radius: 18px;
-            padding: 14px;
-            border: 1px solid #93c5fd;
+        .status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 15px;
         }
-        .task-item {
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-left: 3px solid #eab308;
-            transition: all 0.15s;
+        .status.connected {
+            background: #d1fae5;
+            color: #065f46;
         }
-        .reminder-item {
-            background: white;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-left: 3px solid #3b82f6;
-            transition: all 0.15s;
-        }
-        
-        .user-select-item {
-            transition: all 0.15s;
-        }
-        .user-select-item:hover {
-            background-color: #f0fdf4;
-            transform: translateX(3px);
-        }
-        
-        .group-checkbox {
-            width: 18px;
-            height: 18px;
-            border-radius: 5px;
-            border: 2px solid #cbd5e1;
-            cursor: pointer;
-        }
-        .group-checkbox:checked {
-            background-color: #10b981;
-            border-color: #10b981;
-        }
-        
-        .export-btn {
-            padding: 5px 10px;
-            font-size: 11px;
-            border-radius: 8px;
-            transition: all 0.15s;
-            cursor: pointer;
-        }
-        
-        .user-photo {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        
-        .photo-placeholder {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #10b981, #059669);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-        
-        .tab-content {
-            display: block;
-        }
-        
-        .tab-content.hidden {
-            display: none !important;
+        .status.disconnected {
+            background: #fee2e2;
+            color: #dc2626;
         }
     </style>
 </head>
 <body>
 
-<div class="flex h-screen">
-    <!-- SIDEBAR -->
-    <aside class="w-72 sidebar backdrop-blur-sm flex flex-col shadow-xl z-20">
-        <div class="p-5 border-b border-emerald-200">
-            <div class="flex items-center gap-3">
-                <div class="sidebar-logo rounded-xl p-2 shadow-md bg-gradient-to-r from-emerald-500 to-green-600">
-                    <i class="fas fa-calendar-alt text-white text-xl"></i>
-                </div>
-                <div>
-                    <h2 class="font-bold sidebar-title text-xl">Meeting<span class="text-emerald-600">Hub</span></h2>
-                    <p class="text-xs sidebar-subtitle text-emerald-700">Management System</p>
-                </div>
-            </div>
-        </div>
-        
-        <nav class="flex-1 py-6 px-3 space-y-1.5">
-            <a href="#" data-tab="dashboard" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-chart-pie w-5"></i> Dashboard
-            </a>
-            <a href="#" data-tab="users" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-users w-5"></i> Users
-            </a>
-            <a href="#" data-tab="meetings" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-calendar-check w-5"></i> Meetings
-            </a>
-            <a href="#" data-tab="tasks" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-tasks w-5"></i> Tasks & Reminders
-                <span id="taskNotificationBadge" class="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 hidden">0</span>
-            </a>
-            <a href="#" data-tab="reports" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
-                <i class="fas fa-chart-line w-5"></i> Reports
-            </a>
-        </nav>
-        
-        <div class="p-4 border-t border-emerald-200 text-xs text-emerald-700">
-            <i class="fas fa-cloud-upload-alt mr-1"></i> Cloud Sync
-        </div>
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-        <header class="bg-white/90 backdrop-blur-sm sticky top-0 z-10 shadow-md">
-            <div class="px-6 py-3 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center shadow-md">
-                        <i class="fas fa-calendar-week text-white text-sm"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">Meeting Manager Pro</h3>
-                        <p class="text-xs text-gray-500">Manage your meetings efficiently</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="bg-white/70 px-3 py-1.5 rounded-full shadow-sm">
-                        <i class="fas fa-user text-emerald-600 text-sm mr-1"></i>
-                        <span class="text-sm font-medium text-gray-700">Admin</span>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <main class="flex-1 overflow-y-auto p-5">
-            <!-- DASHBOARD -->
-            <div id="dashboard-tab" class="tab-content space-y-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-800">📊 Dashboard</h1>
-                    <p class="text-gray-500 text-xs mt-1">Key metrics at a glance</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Total Users</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center">
-                                <i class="fas fa-users text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashUsers">0</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Total Meetings</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 flex items-center justify-center">
-                                <i class="fas fa-calendar-check text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashMeetings">0</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Meeting Types</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center">
-                                <i class="fas fa-chart-pie text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashTypes">0</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-4 shadow-md">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600 text-xs font-medium">Avg Duration</span>
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 flex items-center justify-center">
-                                <i class="fas fa-hourglass-half text-white text-sm"></i>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold mt-2 text-gray-800" id="dashAvg">0</p>
-                    </div>
-                </div>
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold text-gray-800 text-md mb-3">📈 Meetings by Type</h3>
-                    <div class="chart-container"><canvas id="typeChart" height="150"></canvas></div>
-                </div>
-            </div>
-
-            <!-- USERS TAB -->
-            <div id="users-tab" class="tab-content hidden space-y-4">
-                <div class="flex justify-between items-center flex-wrap gap-2">
-                    <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-user-plus mr-2 text-emerald-600"></i>User Management</h2>
-                    <div class="flex gap-2 flex-wrap">
-                        <button onclick="openAddUserModal()" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-plus mr-1"></i> Add User</button>
-                        <label class="bg-gradient-to-r from-blue-500 to-cyan-600 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer shadow-md"><i class="fas fa-upload mr-1"></i> Excel<input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelUpload(this)"></label>
-                        <button onclick="exportFullJSON()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-download mr-1"></i> Export</button>
-                        <label class="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-3 py-1.5 rounded-lg text-xs cursor-pointer shadow-md"><i class="fas fa-upload mr-1"></i> Import<input type="file" id="importJSON" accept=".json" class="hidden" onchange="importJSON(this)"></label>
-                        <span id="userCountBadge" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-bold">0 users</span>
-                    </div>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold text-gray-800 mb-3 text-md"><i class="fas fa-list mr-2 text-emerald-600"></i> Users List</h3>
-                    <div id="usersListContainer" class="users-grid"></div>
-                </div>
-            </div>
-
-            <!-- MEETINGS TAB -->
-            <div id="meetings-tab" class="tab-content hidden space-y-5">
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-5 shadow-md">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-calendar-plus mr-2 text-emerald-600"></i>Schedule Meeting</h2>
-                        <button onclick="openGroupMeetingModal()" class="btn-gradient-primary text-white px-4 py-2 rounded-lg text-sm shadow-md flex items-center gap-2">
-                            <i class="fas fa-users"></i> Group Meeting
-                        </button>
-                    </div>
-                    <div class="form-row">
-                        <select id="meetingUserSelect" class="form-field text-sm"><option value="">-- Select User --</option></select>
-                        <input type="datetime-local" id="meetingDateTime" class="form-field text-sm">
-                        <input type="number" id="meetingDuration" placeholder="Duration (min)" class="form-field text-sm">
-                    </div>
-                    <div class="form-row">
-                        <select id="meetingType" class="form-field text-sm">
-                            <option value="Individual">👤 Individual</option>
-                            <option value="Team">👥 Team</option>
-                            <option value="Disciplinary">⚖️ Disciplinary</option>
-                            <option value="CLF">📊 CLF</option>
-                            <option value="Project Review">📁 Project Review</option>
-                            <option value="Strategic">🎯 Strategic</option>
-                            <option value="One on One">🤝 One on One</option>
-                        </select>
-                        <button onclick="addMeeting()" class="btn-gradient-success text-white px-5 py-2 rounded-lg text-sm shadow-md font-semibold">
-                            <i class="fas fa-save mr-1"></i> Save
-                        </button>
-                    </div>
-                    <textarea id="meetingMom" rows="2" placeholder="Minutes of Meeting (MOM)..." class="w-full border border-gray-300 rounded-lg p-2 mt-3 text-sm focus:ring-1 focus:ring-emerald-400 outline-none"></textarea>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-5 shadow-md">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-id-card mr-2 text-emerald-600"></i>Users Summary</h2>
-                        <span id="userListCount" class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-bold">0 users</span>
-                    </div>
-                    <div id="usersCardsContainer" class="users-grid"></div>
-                </div>
-            </div>
-
-            <!-- TASKS & REMINDERS TAB -->
-            <div id="tasks-tab" class="tab-content hidden space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-tasks mr-2 text-emerald-600"></i>Tasks & Reminders</h2>
-                </div>
-                
-                <div class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold text-gray-800 mb-3 text-md"><i class="fas fa-plus-circle mr-2 text-emerald-600"></i> Add New</h3>
-                    <div class="form-row">
-                        <select id="itemType" class="form-field text-sm" onchange="toggleTaskReminderFields()">
-                            <option value="task">✅ Task</option>
-                            <option value="reminder">⏰ Reminder</option>
-                        </select>
-                        <input type="text" id="itemTitle" placeholder="Title..." class="form-field text-sm">
-                    </div>
-                    <div class="form-row">
-                        <input type="date" id="itemDate" class="form-field text-sm">
-                        <input type="time" id="itemTime" class="form-field text-sm" step="60">
-                        <select id="taskPriority" class="form-field text-sm">
-                            <option value="low">🟢 Low</option>
-                            <option value="medium">🟡 Medium</option>
-                            <option value="high">🔴 High</option>
-                        </select>
-                        <textarea id="reminderDesc" rows="1" placeholder="Description..." class="form-field text-sm" style="display: none;"></textarea>
-                        <button onclick="addTaskOrReminder()" class="btn-gradient-primary text-white px-5 py-2 rounded-lg text-sm shadow-md whitespace-nowrap">
-                            <i class="fas fa-plus mr-1"></i> Add
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="split-container">
-                    <div class="task-column shadow-md">
-                        <div class="column-header text-sm mb-2">
-                            <span><i class="fas fa-check-circle mr-1"></i>Tasks</span>
-                            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold" id="taskCount">0</span>
-                        </div>
-                        <div id="tasksListContainer" class="space-y-1.5 max-h-[400px] overflow-y-auto pr-1"></div>
-                    </div>
-                    
-                    <div class="reminder-column shadow-md">
-                        <div class="column-header text-sm mb-2">
-                            <span><i class="fas fa-bell mr-1"></i>Reminders</span>
-                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold" id="reminderCount">0</span>
-                        </div>
-                        <div id="remindersListContainer" class="space-y-1.5 max-h-[400px] overflow-y-auto pr-1"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- REPORTS -->
-            <div id="reports-tab" class="tab-content hidden space-y-4">
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h2 class="text-lg font-bold mb-3 text-gray-800"><i class="fas fa-chart-pie mr-2 text-emerald-600"></i>Meeting Distribution</h2>
-                    <div class="chart-container"><canvas id="reportChart" height="180"></canvas></div>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold mb-2 text-gray-800 text-md"><i class="fas fa-download mr-2 text-emerald-600"></i> Export Reports</h3>
-                    <div class="export-buttons flex gap-2 flex-wrap">
-                        <button onclick="exportMeetingsReport()" class="export-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs px-2 py-1 rounded"><i class="fas fa-calendar-alt mr-1"></i> Meetings</button>
-                        <button onclick="exportUsersReport()" class="export-btn bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs px-2 py-1 rounded"><i class="fas fa-users mr-1"></i> Users</button>
-                        <button onclick="exportTasksReport()" class="export-btn bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs px-2 py-1 rounded"><i class="fas fa-tasks mr-1"></i> Tasks</button>
-                        <button onclick="exportFullReport()" class="export-btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs px-2 py-1 rounded"><i class="fas fa-file-alt mr-1"></i> Full</button>
-                        <button onclick="exportStatistics()" class="export-btn bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs px-2 py-1 rounded"><i class="fas fa-chart-bar mr-1"></i> Stats</button>
-                    </div>
-                </div>
-                
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h3 class="font-bold mb-2 text-gray-800 text-md"><i class="fas fa-history mr-2 text-emerald-600"></i> Recent Activity</h3>
-                    <div id="recentLogs" class="space-y-1 text-xs max-h-36 overflow-y-auto pr-1"></div>
-                </div>
-            </div>
-        </main>
-    </div>
+<div class="card">
+    <h2>📡 تست اتصال به Supabase</h2>
+    <div id="connectionStatus" class="status">در حال بررسی اتصال...</div>
 </div>
 
-<!-- Modals -->
-<div id="groupMeetingModal" class="modal" onclick="closeGroupMeetingModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-users mr-2 text-emerald-600"></i>Group Meeting Setup</h3>
-            <button onclick="closeGroupMeetingModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="groupMeetingModalBody"></div>
-    </div>
+<div class="card">
+    <h3>📖 1. خواندن لیست کاربران</h3>
+    <button onclick="testReadUsers()">خواندن کاربران</button>
+    <div id="readResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
-<div id="scheduleModal" class="modal" onclick="closeScheduleModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800" id="scheduleModalTitle">Schedule Meeting</h3>
-            <button onclick="closeScheduleModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="scheduleModalBody"></div>
-    </div>
+<div class="card">
+    <h3>✏️ 2. نوشتن کاربر جدید</h3>
+    <input type="text" id="newUserName" placeholder="نام کاربر (مثال: احمد)" style="width: 100%;">
+    <input type="text" id="newUserEmail" placeholder="ایمیل (اختیاری)" style="width: 100%;">
+    <button onclick="testWriteUser()">افزودن کاربر به Supabase</button>
+    <div id="writeResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
-<div id="userModal" class="modal" onclick="closeModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800" id="modalTitle">User Meetings</h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="modalBody"></div>
-    </div>
-</div>
-
-<div id="addUserModal" class="modal" onclick="closeAddUserModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800">Add New User</h3>
-            <button onclick="closeAddUserModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div>
-            <input type="text" id="newUsername" placeholder="Username" class="w-full border border-gray-300 rounded-lg p-2 text-sm mb-3">
-            <div class="flex gap-2">
-                <button onclick="saveNewUser()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm font-semibold">Add</button>
-                <button onclick="closeAddUserModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-semibold">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="editUserModal" class="modal" onclick="closeEditUserModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
-            <h3 class="text-lg font-bold text-gray-800">Edit User</h3>
-            <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
-        </div>
-        <div id="editUserModalBody"></div>
-    </div>
+<div class="card">
+    <h3>🗑️ 3. حذف آخرین کاربر</h3>
+    <button onclick="testDeleteLastUser()">حذف آخرین کاربر</button>
+    <div id="deleteResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
 <script>
@@ -601,816 +116,190 @@
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-// ایجاد کلاینت Supabase
-const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('✅ Supabase connected');
+let supabaseClient = null;
 
-// متغیرهای اصلی
-let users = [];
-let meetings = [];
-let tasks = [];
-let chart1 = null, chart2 = null;
-let currentEditUserId = null;
-
-// ========== توابع کمکی ==========
-function showToast(message, type = "success") {
-    let toast = document.createElement("div");
-    toast.className = `toast`;
-    toast.innerHTML = `<i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"} text-sm"></i><span>${message}</span>`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+// نمایش پیام در یک المان
+function showResult(elementId, message, isError = false) {
+    const element = document.getElementById(elementId);
+    element.innerHTML = message;
+    element.className = `result ${isError ? 'error' : 'success'}`;
 }
 
-function escapeHtml(str) {
-    if(!str) return '';
-    return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+// به‌روزرسانی وضعیت اتصال
+function updateConnectionStatus(connected, message = '') {
+    const statusDiv = document.getElementById('connectionStatus');
+    if (connected) {
+        statusDiv.className = 'status connected';
+        statusDiv.innerHTML = `✅ متصل به Supabase ${message ? `- ${message}` : ''}`;
+    } else {
+        statusDiv.className = 'status disconnected';
+        statusDiv.innerHTML = `❌ عدم اتصال به Supabase - ${message}`;
+    }
 }
 
-function getInitial(name) {
-    if(!name) return "?";
-    return name.charAt(0).toUpperCase();
-}
-
-// تابع دریافت URL عکس از استوریج Supabase
-function getPhotoUrl(username) {
-    if(!username) return null;
-    let fileName = username.replace(/\s/g, '').toLowerCase();
-    const { data } = supabase.storage.from('user-photos').getPublicUrl(`${fileName}.png`);
-    return data.publicUrl;
-}
-
-// ========== توابع بارگذاری از Supabase ==========
-async function loadUsers() {
+// تست اتصال به Supabase
+async function testConnection() {
     try {
-        const { data, error } = await supabase.from('users').select('*').order('id');
-        if (error) throw error;
+        showResult('readResult', 'در حال بررسی اتصال...', false);
+        
+        // ابتدا بررسی می‌کنیم که کتابخانه بارگذاری شده باشد
+        if (typeof supabaseJs === 'undefined') {
+            updateConnectionStatus(false, 'کتابخانه Supabase بارگذاری نشد');
+            showResult('readResult', '❌ کتابخانه Supabase بارگذاری نشد! لطفاً اینترنت خود را بررسی کنید.', true);
+            return false;
+        }
+        
+        // ایجاد کلاینت
+        supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // تست با یک کوئری ساده
+        const { data, error } = await supabaseClient.from('users').select('count', { count: 'exact', head: true });
+        
+        if (error) {
+            updateConnectionStatus(false, error.message);
+            showResult('readResult', `❌ خطا در اتصال: ${error.message}`, true);
+            return false;
+        }
+        
+        updateConnectionStatus(true, 'اتصال برقرار است');
+        showResult('readResult', '✅ اتصال به Supabase موفقیت‌آمیز بود! حالا می‌توانید تست‌های دیگر را انجام دهید.', false);
+        return true;
+        
+    } catch(e) {
+        updateConnectionStatus(false, e.message);
+        showResult('readResult', `❌ خطا: ${e.message}`, true);
+        return false;
+    }
+}
+
+// تست خواندن کاربران
+async function testReadUsers() {
+    showResult('readResult', 'در حال خواندن داده‌ها...', false);
+    
+    if (!supabaseClient) {
+        const connected = await testConnection();
+        if (!connected) return;
+    }
+    
+    try {
+        const { data, error } = await supabaseClient.from('users').select('*');
+        
+        if (error) {
+            showResult('readResult', `❌ خطا در خواندن: ${error.message}`, true);
+            return;
+        }
+        
         if (data && data.length > 0) {
-            users = data;
-            console.log(`✅ ${users.length} users loaded from Supabase`);
+            let html = '<strong>✅ لیست کاربران در Supabase:</strong><br><br>';
+            html += '<ul style="margin: 0; padding-right: 20px;">';
+            data.forEach(user => {
+                html += `<li><strong>${user.username}</strong> (${user.email || 'بدون ایمیل'}) - ID: ${user.id}</li>`;
+            });
+            html += '</ul>';
+            html += `<br><strong>تعداد کل:</strong> ${data.length} کاربر`;
+            showResult('readResult', html, false);
         } else {
-            // داده‌های پیش‌فرض
-            users = [
-                { id: 1, username: "احمد", email: "ahmad@example.com" },
-                { id: 2, username: "سارا", email: "sara@example.com" },
-                { id: 3, username: "رضا", email: "reza@example.com" }
-            ];
-            await syncUsers();
+            showResult('readResult', '📭 هیچ کاربری در Supabase یافت نشد. ابتدا یک کاربر اضافه کنید.', false);
         }
-        renderAll();
-    } catch (error) {
-        console.error('Error loading users:', error);
-        showToast('خطا در بارگذاری کاربران', 'error');
-    }
-}
-
-async function loadMeetings() {
-    try {
-        const { data, error } = await supabase.from('meetings').select('*').order('date', { ascending: false });
-        if (error) throw error;
-        if (data) {
-            meetings = data;
-            console.log(`✅ ${meetings.length} meetings loaded from Supabase`);
-        }
-        renderAll();
-    } catch (error) {
-        console.error('Error loading meetings:', error);
-        meetings = [];
-    }
-}
-
-async function loadTasks() {
-    try {
-        const { data, error } = await supabase.from('tasks').select('*').order('date', { ascending: true });
-        if (error) throw error;
-        if (data && data.length > 0) {
-            tasks = data;
-            console.log(`✅ ${tasks.length} tasks loaded from Supabase`);
-        } else {
-            // داده‌های پیش‌فرض
-            let today = new Date().toISOString().slice(0,10);
-            tasks = [
-                { id: Date.now(), type: "task", title: "بررسی گزارش‌ها", date: today, time: "14:00", priority: "high", completed: false },
-                { id: Date.now()+1, type: "reminder", title: "جلسه تیم", date: today, time: "09:30", description: "اسلایدها را آماده کنید", completed: false }
-            ];
-            await syncTasks();
-        }
-        renderTasksAndReminders();
-    } catch (error) {
-        console.error('Error loading tasks:', error);
-        tasks = [];
-    }
-}
-
-// ========== توابع همگام‌سازی با Supabase ==========
-async function syncUsers() {
-    try {
-        for(let u of users) {
-            const { error } = await supabase.from('users').upsert(u, { onConflict: 'id' });
-            if (error) console.error('Error syncing user:', error);
-        }
-        console.log('✅ Users synced to Supabase');
-    } catch (error) {
-        console.error('Sync users error:', error);
-    }
-}
-
-async function syncMeetings() {
-    try {
-        for(let m of meetings) {
-            const { error } = await supabase.from('meetings').upsert({
-                id: m.id,
-                user_id: m.user_id || m.userId,
-                user_name: m.user_name || m.userName,
-                date: m.date,
-                time: m.time,
-                duration: m.duration,
-                type: m.type,
-                mom: m.mom
-            }, { onConflict: 'id' });
-            if (error) console.error('Error syncing meeting:', error);
-        }
-        console.log('✅ Meetings synced to Supabase');
-    } catch (error) {
-        console.error('Sync meetings error:', error);
-    }
-}
-
-async function syncTasks() {
-    try {
-        for(let t of tasks) {
-            const { error } = await supabase.from('tasks').upsert(t, { onConflict: 'id' });
-            if (error) console.error('Error syncing task:', error);
-        }
-        console.log('✅ Tasks synced to Supabase');
-    } catch (error) {
-        console.error('Sync tasks error:', error);
-    }
-}
-
-// ========== توابع منوها ==========
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.add('hidden');
-    });
-    
-    const selectedTab = document.getElementById(`${tabId}-tab`);
-    if (selectedTab) selectedTab.classList.remove('hidden');
-    
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.classList.remove('sidebar-item-active');
-    });
-    
-    const activeLink = document.querySelector(`.sidebar-link[data-tab="${tabId}"]`);
-    if (activeLink) activeLink.classList.add('sidebar-item-active');
-    
-    if (tabId === 'dashboard' || tabId === 'reports') updateDashboardAndCharts();
-    if (tabId === 'meetings') renderUsersCards();
-    if (tabId === 'tasks') renderTasksAndReminders();
-    if (tabId === 'users') renderUsersList();
-}
-
-// ========== توابع رندر ==========
-function renderAll() { 
-    renderUserSelect(); 
-    renderUsersCards();
-    renderUsersList();
-    renderTasksAndReminders();
-    updateDashboardAndCharts(); 
-    updateUserCounts();
-}
-
-function renderUsersList() {
-    let container = document.getElementById("usersListContainer");
-    if(!container) return;
-    if(users.length === 0) { 
-        container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>کاربری وجود ندارد. از دکمه Add User استفاده کنید.</div>"; 
-        return; 
-    }
-    
-    let html = '';
-    for(let u of users) {
-        let userMeetings = meetings.filter(m => (m.user_id === u.id || m.userId === u.id));
-        let meetingCount = userMeetings.length;
-        let photoUrl = getPhotoUrl(u.username);
         
-        html += `
-            <div class="user-card">
-                <div class="flex items-center gap-3 mb-3">
-                    <img src="${photoUrl}" class="user-photo w-16 h-16 rounded-full object-cover" 
-                         onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'"
-                         style="display: block">
-                    <div class="photo-placeholder" style="display: none">${getInitial(u.username)}</div>
-                    <div>
-                        <div class="font-bold text-gray-800">${escapeHtml(u.username)}</div>
-                        ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
-                    </div>
-                </div>
-                <div class="pt-2">
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500 text-xs"></i> جلسات:</span>
-                        <span class="font-bold text-emerald-600">${meetingCount}</span>
-                    </div>
-                </div>
-                <div class="user-actions flex gap-2 mt-3 pt-2 border-t border-gray-100">
-                    <button onclick="openEditUserModal(${u.id})" class="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg"><i class="fas fa-edit mr-1"></i> ویرایش</button>
-                    <button onclick="deleteUser(${u.id})" class="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg"><i class="fas fa-trash-alt mr-1"></i> حذف</button>
-                </div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
-}
-
-function renderUsersCards() {
-    let container = document.getElementById("usersCardsContainer");
-    if(!container) return;
-    if(users.length === 0) { 
-        container.innerHTML = "<div class='col-span-3 text-center text-gray-400 py-6 text-sm'>کاربری اضافه نشده است.</div>"; 
-        return; 
-    }
-    
-    let html = '';
-    for(let u of users) {
-        let userMeetings = meetings.filter(m => (m.user_id === u.id || m.userId === u.id));
-        let meetingCount = userMeetings.length;
-        let totalDuration = userMeetings.reduce((sum, m) => sum + m.duration, 0);
-        let photoUrl = getPhotoUrl(u.username);
-        
-        html += `
-            <div class="user-card">
-                <div class="flex justify-between items-start mb-3">
-                    <button onclick="openScheduleModal(${u.id})" class="btn-gradient-primary text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-calendar-plus mr-1"></i> تنظیم جلسه</button>
-                    <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> جزئیات</button>
-                </div>
-                <div class="flex items-center gap-3 mb-3">
-                    <img src="${photoUrl}" class="user-photo w-16 h-16 rounded-full object-cover" 
-                         onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'"
-                         style="display: block">
-                    <div class="photo-placeholder" style="display: none">${getInitial(u.username)}</div>
-                    <div>
-                        <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
-                        ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
-                    </div>
-                </div>
-                <div class="border-t border-gray-100 pt-3 space-y-2">
-                    <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-calendar-check mr-1 text-emerald-500"></i> جلسات:</span><span class="font-bold text-emerald-600">${meetingCount}</span></div>
-                    <div class="flex justify-between text-sm"><span class="text-gray-600"><i class="fas fa-hourglass-half mr-1 text-blue-500"></i> مجموع زمان:</span><span class="font-bold text-blue-600">${totalDuration} دقیقه</span></div>
-                </div>
-            </div>
-        `;
-    }
-    container.innerHTML = html;
-}
-
-function renderTasksAndReminders() {
-    let tasksContainer = document.getElementById("tasksListContainer");
-    let remindersContainer = document.getElementById("remindersListContainer");
-    if(!tasksContainer || !remindersContainer) return;
-    
-    let tasksList = tasks.filter(t => t.type === "task");
-    let remindersList = tasks.filter(t => t.type === "reminder");
-    
-    document.getElementById("taskCount") && (document.getElementById("taskCount").innerText = tasksList.length);
-    document.getElementById("reminderCount") && (document.getElementById("reminderCount").innerText = remindersList.length);
-    
-    let today = new Date().toISOString().slice(0,10);
-    
-    if(tasksList.length === 0) {
-        tasksContainer.innerHTML = "<div class='text-center text-gray-400 py-3 text-xs'>هیچ وظیفه‌ای وجود ندارد</div>";
-    } else {
-        let tasksHtml = '';
-        for(let t of tasksList) {
-            let isToday = t.date === today;
-            tasksHtml += `
-                <div class="task-item text-sm p-2 ${t.completed ? 'bg-gray-100' : ''}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 text-xs">✅ ${escapeHtml(t.title)} ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}</div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">${t.date} ${t.time} • ${t.priority === 'high' ? '🔴 بالا' : (t.priority === 'medium' ? '🟡 متوسط' : '🟢 پایین')}</div>
-                        </div>
-                        <div class="flex gap-1">
-                            ${!t.completed ? `<button onclick="markTaskComplete(${t.id})" class="text-green-500 text-xs"><i class="fas fa-check-circle"></i></button>` : ''}
-                            <button onclick="deleteTask(${t.id})" class="text-red-400 text-xs"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        tasksContainer.innerHTML = tasksHtml;
-    }
-    
-    if(remindersList.length === 0) {
-        remindersContainer.innerHTML = "<div class='text-center text-gray-400 py-3 text-xs'>هیچ یادآوری وجود ندارد</div>";
-    } else {
-        let remindersHtml = '';
-        for(let r of remindersList) {
-            let isToday = r.date === today;
-            remindersHtml += `
-                <div class="reminder-item text-sm p-2 ${r.completed ? 'bg-gray-100' : ''}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 text-xs">⏰ ${escapeHtml(r.title)} ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}</div>
-                            <div class="text-[10px] text-gray-500 mt-0.5">${r.date} ${r.time}</div>
-                            <div class="text-[10px] text-gray-600 mt-0.5">📝 ${escapeHtml(r.description || '')}</div>
-                        </div>
-                        <div class="flex gap-1">
-                            ${!r.completed ? `<button onclick="markTaskComplete(${r.id})" class="text-green-500 text-xs"><i class="fas fa-check-circle"></i></button>` : ''}
-                            <button onclick="deleteTask(${r.id})" class="text-red-400 text-xs"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        remindersContainer.innerHTML = remindersHtml;
+    } catch(e) {
+        showResult('readResult', `❌ خطا: ${e.message}`, true);
     }
 }
 
-function renderUserSelect() {
-    let sel = document.getElementById("meetingUserSelect");
-    if(sel) { 
-        let options = '<option value="">-- انتخاب کاربر --</option>'; 
-        for(let u of users) options += `<option value="${u.id}">${escapeHtml(u.username)}</option>`; 
-        sel.innerHTML = options; 
-    }
-}
-
-// ========== توابع CRUD ==========
-async function saveNewUser() {
-    let username = document.getElementById("newUsername").value.trim();
-    if(!username) { showToast("نام کاربری الزامی است!", "error"); return; }
-    if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("این نام کاربری قبلاً ثبت شده است!", "error"); return; }
+// تست نوشتن کاربر جدید
+async function testWriteUser() {
+    const username = document.getElementById('newUserName').value.trim();
+    const email = document.getElementById('newUserEmail').value.trim();
     
-    const newUser = { id: Date.now(), username: username, email: "" };
-    users.push(newUser);
-    await syncUsers();
-    closeAddUserModal();
-    renderAll();
-    showToast(`کاربر "${username}" با موفقیت اضافه شد`);
-}
-
-async function deleteUser(userId) {
-    if(confirm("آیا از حذف این کاربر و تمام جلساتش مطمئن هستید؟")) {
-        users = users.filter(u => u.id !== userId);
-        meetings = meetings.filter(m => (m.user_id !== userId && m.userId !== userId));
-        await syncUsers();
-        await syncMeetings();
-        renderAll();
-        showToast("کاربر با موفقیت حذف شد");
-    }
-}
-
-async function addMeeting() {
-    let userId = document.getElementById("meetingUserSelect").value;
-    if(!userId) { showToast("لطفاً یک کاربر انتخاب کنید!", "error"); return; }
-    
-    let dateTime = document.getElementById("meetingDateTime").value;
-    let duration = document.getElementById("meetingDuration").value;
-    let type = document.getElementById("meetingType").value;
-    let mom = document.getElementById("meetingMom").value.trim() || "بدون صورتجلسه";
-    
-    if(!dateTime || !duration) { showToast("لطفاً تمام فیلدها را پر کنید!", "error"); return; }
-    
-    let [date, time] = dateTime.split('T');
-    let timeFormatted = time.substring(0, 5);
-    let user = users.find(u => u.id == userId);
-    if(!user) return;
-    
-    const newMeeting = { 
-        id: Date.now(), 
-        user_id: user.id, 
-        user_name: user.username, 
-        date, 
-        time: timeFormatted, 
-        duration: parseInt(duration), 
-        type, 
-        mom 
-    };
-    meetings.push(newMeeting);
-    await syncMeetings();
-    
-    document.getElementById("meetingDateTime").value = "";
-    document.getElementById("meetingDuration").value = "";
-    document.getElementById("meetingMom").value = "";
-    renderAll();
-    showToast(`جلسه برای ${user.username} با موفقیت ثبت شد`);
-}
-
-async function addTaskOrReminder() {
-    let type = document.getElementById("itemType").value;
-    let title = document.getElementById("itemTitle").value.trim();
-    let date = document.getElementById("itemDate").value;
-    let time = document.getElementById("itemTime").value;
-    
-    if(!title || !date || !time) { showToast("لطفاً تمام فیلدها را پر کنید!", "error"); return; }
-    
-    if(type === "task") {
-        let priority = document.getElementById("taskPriority").value;
-        tasks.push({ id: Date.now(), type: "task", title, date, time, priority, completed: false });
-    } else {
-        let description = document.getElementById("reminderDesc").value.trim() || "بدون توضیحات";
-        tasks.push({ id: Date.now(), type: "reminder", title, date, time, description, completed: false });
-    }
-    await syncTasks();
-    renderTasksAndReminders();
-    
-    document.getElementById("itemTitle").value = "";
-    document.getElementById("itemDate").value = "";
-    document.getElementById("itemTime").value = "";
-    document.getElementById("reminderDesc").value = "";
-    showToast(`${type === "task" ? "وظیفه" : "یادآوری"} با موفقیت اضافه شد`);
-}
-
-async function deleteTask(id) {
-    if(confirm("آیا از حذف این آیتم مطمئن هستید؟")) {
-        tasks = tasks.filter(t => t.id !== id);
-        await syncTasks();
-        renderTasksAndReminders();
-        showToast("آیتم با موفقیت حذف شد");
-    }
-}
-
-async function markTaskComplete(id) {
-    let item = tasks.find(t => t.id === id);
-    if(item) {
-        item.completed = true;
-        await syncTasks();
-        renderTasksAndReminders();
-        showToast(`"${item.title}" انجام شد`);
-    }
-}
-
-// ========== توابع مودال ==========
-function openAddUserModal() {
-    document.getElementById("addUserModal").style.display = "flex";
-    document.getElementById("newUsername").value = "";
-}
-function closeAddUserModal() { document.getElementById("addUserModal").style.display = "none"; }
-function closeAddUserModalOnOutside(event) { if(event.target === document.getElementById("addUserModal")) closeAddUserModal(); }
-
-function openScheduleModal(userId) {
-    let user = users.find(u => u.id === userId);
-    if(!user) return;
-    document.getElementById("scheduleModalTitle").innerHTML = `<i class="fas fa-calendar-plus mr-1 text-emerald-600"></i>تنظیم جلسه برای ${escapeHtml(user.username)}`;
-    
-    let html = `
-        <div class="space-y-3">
-            <div><input type="datetime-local" id="scheduleDateTime" class="w-full border rounded-lg p-2 text-sm"></div>
-            <div><input type="number" id="scheduleDuration" placeholder="مدت زمان (دقیقه)" class="w-full border rounded-lg p-2 text-sm"></div>
-            <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
-                <option value="Individual">👤 انفرادی</option><option value="Team">👥 تیمی</option>
-                <option value="Disciplinary">⚖️ تنبیهی</option><option value="CLF">📊 CLF</option>
-                <option value="Project Review">📁 بازبینی پروژه</option>
-                <option value="Strategic">🎯 استراتژیک</option><option value="One on One">🤝 یک به یک</option>
-            </select></div>
-            <div><textarea id="scheduleMom" rows="2" placeholder="صورتجلسه..." class="w-full border rounded-lg p-2 text-sm"></textarea></div>
-            <div class="flex gap-2"><button onclick="saveScheduledMeeting(${userId})" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg text-sm">ذخیره</button><button onclick="closeScheduleModal()" class="flex-1 bg-gray-200 py-2 rounded-lg text-sm">انصراف</button></div>
-        </div>
-    `;
-    document.getElementById("scheduleModalBody").innerHTML = html;
-    document.getElementById("scheduleModal").style.display = "flex";
-}
-
-async function saveScheduledMeeting(userId) {
-    let dateTime = document.getElementById("scheduleDateTime").value;
-    let duration = document.getElementById("scheduleDuration").value;
-    let type = document.getElementById("scheduleType").value;
-    let mom = document.getElementById("scheduleMom").value.trim() || "بدون صورتجلسه";
-    
-    if(!dateTime) { showToast("لطفاً تاریخ و ساعت را انتخاب کنید!", "error"); return; }
-    if(!duration) { showToast("لطفاً مدت زمان را وارد کنید!", "error"); return; }
-    
-    let [date, time] = dateTime.split('T');
-    let timeFormatted = time.substring(0, 5);
-    let user = users.find(u => u.id === userId);
-    if(!user) return;
-    
-    meetings.push({ id: Date.now(), user_id: user.id, user_name: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
-    await syncMeetings();
-    closeScheduleModal();
-    renderAll();
-    showToast(`جلسه برای ${user.username} با موفقیت ثبت شد`);
-}
-
-function closeScheduleModal() { document.getElementById("scheduleModal").style.display = "none"; }
-function closeScheduleModalOnOutside(event) { if(event.target === document.getElementById("scheduleModal")) closeScheduleModal(); }
-
-function openEditUserModal(userId) {
-    let user = users.find(u => u.id === userId);
-    if(!user) return;
-    currentEditUserId = userId;
-    
-    let modalHtml = `
-        <div class="space-y-3">
-            <div><input type="text" id="editUsername" value="${escapeHtml(user.username)}" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><input type="email" id="editEmail" value="${escapeHtml(user.email || '')}" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div class="flex gap-2 pt-2"><button onclick="saveEditedUser()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg">ذخیره</button><button onclick="closeEditUserModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">انصراف</button></div>
-        </div>
-    `;
-    document.getElementById("editUserModalBody").innerHTML = modalHtml;
-    document.getElementById("editUserModal").style.display = "flex";
-}
-
-async function saveEditedUser() {
-    let newUsername = document.getElementById("editUsername").value.trim();
-    let newEmail = document.getElementById("editEmail").value.trim();
-    if(!newUsername) { showToast("نام کاربری الزامی است!", "error"); return; }
-    
-    let userIndex = users.findIndex(u => u.id === currentEditUserId);
-    if(userIndex !== -1) {
-        users[userIndex].username = newUsername;
-        users[userIndex].email = newEmail;
-        await syncUsers();
-        
-        meetings.forEach(m => { 
-            if(m.user_id === currentEditUserId || m.userId === currentEditUserId) {
-                m.user_name = newUsername;
-            } 
-        });
-        await syncMeetings();
-        renderAll();
-        showToast("کاربر با موفقیت ویرایش شد");
-    }
-    closeEditUserModal();
-}
-
-function closeEditUserModal() { document.getElementById("editUserModal").style.display = "none"; }
-function closeEditUserModalOnOutside(event) { if(event.target === document.getElementById("editUserModal")) closeEditUserModal(); }
-
-function showUserDetails(userId) {
-    let user = users.find(u => u.id === userId);
-    let userMeetings = meetings.filter(m => (m.user_id === userId || m.userId === userId));
-    document.getElementById("modalTitle").innerHTML = `<i class="fas fa-user mr-1 text-emerald-600"></i>${escapeHtml(user.username)} - جلسات (${userMeetings.length})`;
-    
-    if(userMeetings.length === 0) {
-        document.getElementById("modalBody").innerHTML = `<div class="text-center text-gray-400 py-6">هیچ جلسه‌ای ثبت نشده است.</div>`;
-    } else {
-        let meetingsHtml = `<div class="space-y-3 max-h-96 overflow-y-auto">`;
-        for(let m of userMeetings) {
-            meetingsHtml += `
-                <div class="border-b border-gray-100 pb-3 mb-2">
-                    <div class="flex justify-between items-start">
-                        <div><div class="font-semibold">${m.date} - ${m.time}</div><div class="text-xs text-gray-500">${m.duration} دقیقه</div><div class="text-xs bg-emerald-100 px-2 py-0.5 rounded-full">${m.type}</div></div>
-                        <button onclick="deleteMeeting(${m.id})" class="text-red-400"><i class="fas fa-trash-alt"></i></button>
-                    </div>
-                    <div class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">📝 ${escapeHtml(m.mom.substring(0,100))}${m.mom.length>100?'...':''}</div>
-                </div>
-            `;
-        }
-        meetingsHtml += `</div>`;
-        document.getElementById("modalBody").innerHTML = meetingsHtml;
-    }
-    document.getElementById("userModal").style.display = "flex";
-}
-
-function closeModal() { document.getElementById("userModal").style.display = "none"; }
-function closeModalOnOutside(event) { if(event.target === document.getElementById("userModal")) closeModal(); }
-
-async function deleteMeeting(meetingId) {
-    if(confirm("آیا از حذف این جلسه مطمئن هستید؟")) {
-        meetings = meetings.filter(m => m.id !== meetingId);
-        await syncMeetings();
-        closeModal();
-        renderAll();
-        showToast("جلسه با موفقیت حذف شد");
-    }
-}
-
-// ========== جلسه گروهی ==========
-function openGroupMeetingModal() {
-    if(users.length === 0) {
-        showToast("لطفاً ابتدا کاربر اضافه کنید!", "error");
+    if (!username) {
+        showResult('writeResult', '❌ لطفا نام کاربر را وارد کنید!', true);
         return;
     }
-    let html = `
-        <div class="space-y-3">
-            <div><select id="groupMeetingType" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
-                <option value="Team">👥 تیمی</option><option value="Individual">👤 انفرادی</option>
-                <option value="Disciplinary">⚖️ تنبیهی</option><option value="CLF">📊 CLF</option>
-                <option value="Project Review">📁 بازبینی پروژه</option>
-                <option value="Strategic">🎯 استراتژیک</option><option value="One on One">🤝 یک به یک</option>
-            </select></div>
-            <div><input type="datetime-local" id="groupMeetingDateTime" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><input type="number" id="groupMeetingDuration" placeholder="مدت زمان (دقیقه)" class="w-full border border-gray-300 rounded-lg p-2 text-sm"></div>
-            <div><div class="flex justify-between items-center mb-2"><label>انتخاب کارمندان</label><button onclick="toggleSelectAllUsers()" class="text-blue-600 text-sm">انتخاب همه</button></div>
-            <div class="border rounded-lg p-2 max-h-48 overflow-y-auto space-y-1 bg-gray-50" id="usersChecklistContainer">
-                ${users.map(user => `<div class="flex items-center gap-2 p-1.5 rounded-lg bg-white"><input type="checkbox" value="${user.id}" class="group-checkbox"> <span>${escapeHtml(user.username)}</span></div>`).join('')}
-            </div></div>
-            <div><textarea id="groupMeetingMom" rows="2" placeholder="صورتجلسه..." class="w-full border border-gray-300 rounded-lg p-2 text-sm"></textarea></div>
-            <div class="flex gap-2 pt-2"><button onclick="saveGroupMeeting()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg">ذخیره</button><button onclick="closeGroupMeetingModal()" class="flex-1 bg-gray-200 py-2 rounded-lg">انصراف</button></div>
-        </div>
-    `;
-    document.getElementById("groupMeetingModalBody").innerHTML = html;
-    document.getElementById("groupMeetingModal").style.display = "flex";
-}
-
-function toggleSelectAllUsers() {
-    let checkboxes = document.querySelectorAll('#usersChecklistContainer input[type="checkbox"]');
-    let allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    checkboxes.forEach(cb => cb.checked = !allChecked);
-}
-
-async function saveGroupMeeting() {
-    let selectedCheckboxes = document.querySelectorAll('#usersChecklistContainer input[type="checkbox"]:checked');
-    if(selectedCheckboxes.length === 0) { showToast("لطفاً حداقل یک نفر را انتخاب کنید!", "error"); return; }
     
-    let dateTime = document.getElementById("groupMeetingDateTime").value;
-    let duration = document.getElementById("groupMeetingDuration").value;
-    let type = document.getElementById("groupMeetingType").value;
-    let mom = document.getElementById("groupMeetingMom").value.trim() || "بدون صورتجلسه";
+    showResult('writeResult', 'در حال افزودن کاربر...', false);
     
-    if(!dateTime) { showToast("لطفاً تاریخ و ساعت را مشخص کنید!", "error"); return; }
-    if(!duration) { showToast("لطفاً مدت زمان را وارد کنید!", "error"); return; }
-    
-    let [date, time] = dateTime.split('T');
-    let timeFormatted = time.substring(0, 5);
-    let durationNum = parseInt(duration);
-    let addedCount = 0;
-    
-    for(let cb of selectedCheckboxes) {
-        let userId = parseInt(cb.value);
-        let user = users.find(u => u.id === userId);
-        if(user) {
-            meetings.push({ id: Date.now() + Math.random(), user_id: user.id, user_name: user.username, date: date, time: timeFormatted, duration: durationNum, type: type, mom: mom });
-            addedCount++;
-        }
+    if (!supabaseClient) {
+        const connected = await testConnection();
+        if (!connected) return;
     }
-    await syncMeetings();
-    closeGroupMeetingModal();
-    renderAll();
-    showToast(`جلسه ${type} برای ${addedCount} نفر با موفقیت ثبت شد`);
-}
-
-function closeGroupMeetingModal() { document.getElementById("groupMeetingModal").style.display = "none"; }
-function closeGroupMeetingModalOnOutside(event) { if(event.target === document.getElementById("groupMeetingModal")) closeGroupMeetingModal(); }
-
-// ========== آپلود اکسل ==========
-async function handleExcelUpload(input) {
-    let file = input.files[0];
-    if(!file) return;
     
-    showToast("در حال پردازش فایل اکسل...", "success");
-    
-    let reader = new FileReader();
-    reader.onload = async function(e) {
-        let data = new Uint8Array(e.target.result);
-        let workbook = XLSX.read(data, { type: 'array' });
-        let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        let rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-        let added = 0;
+    try {
+        const newUser = {
+            id: Date.now(),
+            username: username,
+            email: email || ''
+        };
         
-        for(let i = 0; i < rows.length; i++) {
-            let row = rows[i];
-            if(!row || row.length === 0) continue;
-            
-            let username = row[0] ? String(row[0]).trim() : "";
-            if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
-            
-            if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
-                users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
-                added++;
-            }
+        const { data, error } = await supabaseClient.from('users').insert([newUser]);
+        
+        if (error) {
+            showResult('writeResult', `❌ خطا در نوشتن: ${error.message}`, true);
+            return;
         }
         
-        if(added > 0) { 
-            await syncUsers(); 
-            renderAll(); 
-            showToast(`${added} کاربر با موفقیت اضافه شد`);
-        } else { 
-            showToast("هیچ کاربر معتبری یافت نشد", "error"); 
+        showResult('writeResult', `✅ کاربر "${username}" با موفقیت به Supabase اضافه شد!\n\nاطلاعات ذخیره شده: ${JSON.stringify(newUser, null, 2)}`, false);
+        
+        // پاک کردن فیلدها
+        document.getElementById('newUserName').value = '';
+        document.getElementById('newUserEmail').value = '';
+        
+        // به‌روزرسانی خواندن
+        setTimeout(() => testReadUsers(), 500);
+        
+    } catch(e) {
+        showResult('writeResult', `❌ خطا: ${e.message}`, true);
+    }
+}
+
+// تست حذف آخرین کاربر
+async function testDeleteLastUser() {
+    showResult('deleteResult', 'در حال حذف کاربر...', false);
+    
+    if (!supabaseClient) {
+        const connected = await testConnection();
+        if (!connected) return;
+    }
+    
+    try {
+        // ابتدا آخرین کاربر را پیدا می‌کنیم
+        const { data, error } = await supabaseClient.from('users').select('*').order('id', { ascending: false }).limit(1);
+        
+        if (error) {
+            showResult('deleteResult', `❌ خطا در پیدا کردن کاربر: ${error.message}`, true);
+            return;
         }
-        input.value = '';
-    };
-    reader.readAsArrayBuffer(file);
+        
+        if (!data || data.length === 0) {
+            showResult('deleteResult', '📭 هیچ کاربری برای حذف وجود ندارد!', true);
+            return;
+        }
+        
+        const userToDelete = data[0];
+        
+        // حذف کاربر
+        const { error: deleteError } = await supabaseClient.from('users').delete().eq('id', userToDelete.id);
+        
+        if (deleteError) {
+            showResult('deleteResult', `❌ خطا در حذف: ${deleteError.message}`, true);
+            return;
+        }
+        
+        showResult('deleteResult', `✅ کاربر "${userToDelete.username}" با موفقیت از Supabase حذف شد!`, false);
+        
+        // به‌روزرسانی خواندن
+        setTimeout(() => testReadUsers(), 500);
+        
+    } catch(e) {
+        showResult('deleteResult', `❌ خطا: ${e.message}`, true);
+    }
 }
 
-// ========== آمار و چارت ==========
-function updateUserCounts() {
-    document.getElementById("dashUsers") && (document.getElementById("dashUsers").innerText = users.length);
-    document.getElementById("userCountBadge") && (document.getElementById("userCountBadge").innerText = users.length + " کاربر");
-    document.getElementById("userListCount") && (document.getElementById("userListCount").innerText = users.length + " کاربر");
-    document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetings.length);
-}
-
-function updateDashboardAndCharts() {
-    let meetingsCount = meetings.length;
-    document.getElementById("dashMeetings") && (document.getElementById("dashMeetings").innerText = meetingsCount);
-    let uniqueTypes = new Set(meetings.map(m => m.type)).size;
-    document.getElementById("dashTypes") && (document.getElementById("dashTypes").innerText = uniqueTypes);
-    let avg = meetingsCount ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetingsCount) : 0;
-    document.getElementById("dashAvg") && (document.getElementById("dashAvg").innerText = avg);
-    
-    let typeCount = {};
-    meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
-    let labels = Object.keys(typeCount);
-    let data = Object.values(typeCount);
-    let colors = ["#10b981", "#34d399", "#6ee7b7", "#059669", "#0284c7", "#38bdf8", "#7dd3fc", "#0ea5e9"];
-    
-    let ctx1 = document.getElementById("typeChart")?.getContext("2d");
-    let ctx2 = document.getElementById("reportChart")?.getContext("2d");
-    if(ctx1) { if(chart1) chart1.destroy(); chart1 = new Chart(ctx1, { type: "bar", data: { labels: labels, datasets: [{ label: "تعداد جلسات", data: data, backgroundColor: colors, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: true } }); }
-    if(ctx2) { if(chart2) chart2.destroy(); chart2 = new Chart(ctx2, { type: "pie", data: { labels: labels, datasets: [{ data: data, backgroundColor: colors }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } }); }
-    
-    let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1 flex gap-1 text-[11px]"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1"></i><span>${m.date} ${m.time} - ${m.user_name || m.userName}: ${m.type}</span></div>`).join('');
-    document.getElementById("recentLogs") && (document.getElementById("recentLogs").innerHTML = recentHtml || "<div class='text-gray-400 text-xs'>هیچ جلسه اخیری وجود ندارد</div>");
-}
-
-function toggleTaskReminderFields() {
-    let type = document.getElementById("itemType").value;
-    let prioritySelect = document.getElementById("taskPriority");
-    let reminderDesc = document.getElementById("reminderDesc");
-    if(prioritySelect) prioritySelect.style.display = type === "task" ? "block" : "none";
-    if(reminderDesc) reminderDesc.style.display = type === "reminder" ? "block" : "none";
-}
-
-// ========== توابع خروجی ==========
-function downloadFile(content, filename) {
-    let blob = new Blob([content], { type: "application/json" });
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function exportMeetingsReport() {
-    let report = meetings.map(m => ({ کاربر: m.user_name || m.userName, تاریخ: m.date, ساعت: m.time, مدت: m.duration, نوع: m.type }));
-    downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("گزارش جلسات خروجی گرفته شد");
-}
-
-function exportUsersReport() {
-    let report = users.map(u => ({ نام کاربری: u.username, ایمیل: u.email, تعداد_جلسات: meetings.filter(m => (m.user_id === u.id || m.userId === u.id)).length }));
-    downloadFile(JSON.stringify(report, null, 2), `users_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("گزارش کاربران خروجی گرفته شد");
-}
-
-function exportTasksReport() {
-    let report = tasks.map(t => ({ نوع: t.type, عنوان: t.title, تاریخ: t.date, ساعت: t.time, وضعیت: t.completed ? "انجام شده" : "انجام نشده" }));
-    downloadFile(JSON.stringify(report, null, 2), `tasks_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("گزارش وظایف خروجی گرفته شد");
-}
-
-function exportFullReport() {
-    let typeCount = {};
-    meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
-    let report = { تاریخ_خروجی: new Date().toISOString(), خلاصه: { کل_کاربران: users.length, کل_جلسات: meetings.length, کل_وظایف: tasks.length, انواع_جلسات: typeCount }, کاربران: users, جلسات: meetings, وظایف: tasks };
-    downloadFile(JSON.stringify(report, null, 2), `full_report_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("گزارش کامل خروجی گرفته شد");
-}
-
-function exportStatistics() {
-    let stats = { تاریخ: new Date().toISOString(), کاربران: users.length, جلسات: meetings.length, میانگین_مدت: meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0, وظایف_انجام_شده: tasks.filter(t => t.completed).length };
-    downloadFile(JSON.stringify(stats, null, 2), `stats_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("آمار خروجی گرفته شد");
-}
-
-function exportFullJSON() {
-    let exportData = { users: users, meetings: meetings, tasks: tasks, exportDate: new Date().toISOString() };
-    downloadFile(JSON.stringify(exportData, null, 2), `meeting_manager_backup_${new Date().toISOString().slice(0,19)}.json`);
-    showToast("داده‌ها با موفقیت خروجی گرفته شد");
-}
-
-function importJSON(input) {
-    let file = input.files[0];
-    if(!file) return;
-    let reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            let imported = JSON.parse(e.target.result);
-            if(imported.users) users = imported.users;
-            if(imported.meetings) meetings = imported.meetings;
-            if(imported.tasks) tasks = imported.tasks;
-            await syncUsers(); await syncMeetings(); await syncTasks();
-            renderAll();
-            showToast("داده‌ها با موفقیت وارد شدند");
-        } catch(err) { showToast("فایل JSON نامعتبر است!", "error"); }
-        input.value = '';
-    };
-    reader.readAsText(file);
-}
-
-// ========== شروع برنامه ==========
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            const tabId = link.getAttribute('data-tab');
-            if (tabId) switchTab(tabId);
-        });
-    });
-    
-    init();
+// اجرای تست اتصال در هنگام بارگذاری صفحه
+window.addEventListener('DOMContentLoaded', () => {
+    testConnection();
 });
-
-async function init() {
-    await loadUsers();
-    await loadMeetings();
-    await loadTasks();
-    renderAll();
-    toggleTaskReminderFields();
-    switchTab('dashboard');
-}
 </script>
+
 </body>
 </html>

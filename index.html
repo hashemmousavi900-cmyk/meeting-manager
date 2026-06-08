@@ -607,18 +607,9 @@
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-// جلوگیری از خطای redeclaration
-let supabaseClient = null;
-try {
-    if (typeof supabaseJs !== 'undefined') {
-        supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('✅ Supabase connected');
-    } else {
-        console.warn('Supabase JS not loaded, using localStorage fallback');
-    }
-} catch(e) {
-    console.warn('Supabase error:', e);
-}
+// ایجاد کلاینت Supabase
+const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('✅ Supabase connected');
 
 let users = [];
 let meetings = [];
@@ -643,9 +634,12 @@ function debounceRender() {
     }, 50);
 }
 
+// تابع صحیح برای دریافت آدرس عکس از Supabase Storage
 function getPhotoUrl(username) {
     if(!username) return null;
+    // حذف فاصله و کاراکترهای خاص از نام کاربری برای ساخت نام فایل
     let fileName = username.replace(/\s/g, '').toLowerCase();
+    // آدرس مستقیم عکس در Supabase Storage
     return `${SUPABASE_URL}/storage/v1/object/public/user-photos/${fileName}.png`;
 }
 
@@ -659,27 +653,31 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
 }
 
-// ========== بارگذاری از Supabase (با fallback به localStorage) ==========
+// ========== بارگذاری از Supabase ==========
 async function loadUsers() {
-    if (supabaseClient) {
-        let { data, error } = await supabaseClient.from('users').select('*');
-        if (!error && data && data.length > 0) {
+    try {
+        let { data, error } = await supabase.from('users').select('*');
+        if (error) {
+            console.error('Supabase error:', error);
+        } else if (data && data.length > 0) {
             users = data;
             renderAll();
             return;
         }
+    } catch(e) {
+        console.warn('Supabase connection error:', e);
     }
     
     // Fallback: load from localStorage
-    let stored = localStorage.getItem('meeting_manager_users');
+    let stored = localStorage.getItem('mm_users');
     if (stored) {
         users = JSON.parse(stored);
     }
     if (users.length === 0) {
         users = [
-            { id: 1, username: "Ahmad", email: "ahmad@example.com" },
-            { id: 2, username: "Sara", email: "sara@example.com" },
-            { id: 3, username: "Reza", email: "reza@example.com" }
+            { id: 1, username: "احمد", email: "ahmad@example.com" },
+            { id: 2, username: "سارا", email: "sara@example.com" },
+            { id: 3, username: "رضا", email: "reza@example.com" }
         ];
         saveUsersToStorage();
     }
@@ -687,16 +685,20 @@ async function loadUsers() {
 }
 
 async function loadMeetings() {
-    if (supabaseClient) {
-        let { data, error } = await supabaseClient.from('meetings').select('*');
-        if (!error && data && data.length > 0) {
+    try {
+        let { data, error } = await supabase.from('meetings').select('*');
+        if (error) {
+            console.error('Supabase error:', error);
+        } else if (data && data.length > 0) {
             meetings = data;
             renderAll();
             return;
         }
+    } catch(e) {
+        console.warn('Supabase connection error:', e);
     }
     
-    let stored = localStorage.getItem('meeting_manager_meetings');
+    let stored = localStorage.getItem('mm_meetings');
     if (stored) {
         meetings = JSON.parse(stored);
     } else {
@@ -706,16 +708,20 @@ async function loadMeetings() {
 }
 
 async function loadTasks() {
-    if (supabaseClient) {
-        let { data, error } = await supabaseClient.from('tasks').select('*');
-        if (!error && data && data.length > 0) {
+    try {
+        let { data, error } = await supabase.from('tasks').select('*');
+        if (error) {
+            console.error('Supabase error:', error);
+        } else if (data && data.length > 0) {
             tasks = data;
             renderTasksAndReminders();
             return;
         }
+    } catch(e) {
+        console.warn('Supabase connection error:', e);
     }
     
-    let stored = localStorage.getItem('meeting_manager_tasks');
+    let stored = localStorage.getItem('mm_tasks');
     if (stored) {
         tasks = JSON.parse(stored);
     }
@@ -732,41 +738,50 @@ async function loadTasks() {
 
 // ========== ذخیره در localStorage به عنوان fallback ==========
 function saveUsersToStorage() {
-    localStorage.setItem('meeting_manager_users', JSON.stringify(users));
+    localStorage.setItem('mm_users', JSON.stringify(users));
 }
 
 function saveMeetingsToStorage() {
-    localStorage.setItem('meeting_manager_meetings', JSON.stringify(meetings));
+    localStorage.setItem('mm_meetings', JSON.stringify(meetings));
 }
 
 function saveTasksToStorage() {
-    localStorage.setItem('meeting_manager_tasks', JSON.stringify(tasks));
+    localStorage.setItem('mm_tasks', JSON.stringify(tasks));
 }
 
 async function syncUsers() {
     saveUsersToStorage();
-    if (supabaseClient) {
+    try {
         for(let u of users) {
-            await supabaseClient.from('users').upsert(u, { onConflict: 'id' });
+            await supabase.from('users').upsert(u, { onConflict: 'id' });
         }
+        console.log('Users synced to Supabase');
+    } catch(e) {
+        console.warn('Supabase sync error:', e);
     }
 }
 
 async function syncMeetings() {
     saveMeetingsToStorage();
-    if (supabaseClient) {
+    try {
         for(let m of meetings) {
-            await supabaseClient.from('meetings').upsert(m, { onConflict: 'id' });
+            await supabase.from('meetings').upsert(m, { onConflict: 'id' });
         }
+        console.log('Meetings synced to Supabase');
+    } catch(e) {
+        console.warn('Supabase sync error:', e);
     }
 }
 
 async function syncTasks() {
     saveTasksToStorage();
-    if (supabaseClient) {
+    try {
         for(let t of tasks) {
-            await supabaseClient.from('tasks').upsert(t, { onConflict: 'id' });
+            await supabase.from('tasks').upsert(t, { onConflict: 'id' });
         }
+        console.log('Tasks synced to Supabase');
+    } catch(e) {
+        console.warn('Supabase sync error:', e);
     }
 }
 
@@ -838,7 +853,8 @@ function renderUsersList() {
         html += `
             <div class="user-card">
                 <div class="flex items-center gap-3 mb-3">
-                    <div class="photo-placeholder">${getInitial(u.username)}</div>
+                    <img src="${photoUrl}" class="user-photo" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <div class="photo-placeholder" style="display:none">${getInitial(u.username)}</div>
                     <div>
                         <div class="font-bold text-gray-800">${escapeHtml(u.username)}</div>
                         ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
@@ -881,7 +897,8 @@ function renderUsersCards() {
                     <button onclick="showUserDetails(${u.id})" class="btn-gradient-success text-white px-3 py-1.5 rounded-lg text-xs shadow-md"><i class="fas fa-eye mr-1"></i> Details</button>
                 </div>
                 <div class="flex items-center gap-3 mb-3">
-                    <div class="photo-placeholder">${getInitial(u.username)}</div>
+                    <img src="${photoUrl}" class="user-photo" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <div class="photo-placeholder" style="display:none">${getInitial(u.username)}</div>
                     <div>
                         <div class="font-bold text-gray-800 text-md">${escapeHtml(u.username)}</div>
                         ${u.email ? `<div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>` : ''}
@@ -1073,8 +1090,7 @@ function openScheduleModal(userId) {
             <div><input type="number" id="scheduleDuration" placeholder="Duration (min)" class="w-full border rounded-lg p-2 text-sm"></div>
             <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
                 <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
-                <option value="Disciplinary">⚖️ Disciplinary</option>
-                <option value="CLF">📊 CLF</option>
+                <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
                 <option value="Project Review">📁 Project Review</option>
                 <option value="Strategic">🎯 Strategic</option>
                 <option value="One on One">🤝 One on One</option>
@@ -1248,7 +1264,7 @@ async function saveGroupMeeting() {
 function closeGroupMeetingModal() { document.getElementById("groupMeetingModal").style.display = "none"; }
 function closeGroupMeetingModalOnOutside(event) { if(event.target === document.getElementById("groupMeetingModal")) closeGroupMeetingModal(); }
 
-// ========== آپلود اکسل ==========
+// ========== آپلود اکسل (ذخیره مستقیم در Supabase) ==========
 async function handleExcelUpload(input) {
     let file = input.files[0];
     if(!file) return;
@@ -1259,18 +1275,34 @@ async function handleExcelUpload(input) {
         let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         let rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
         let added = 0;
+        let newUsers = [];
+        
         for(let i = 0; i < rows.length; i++) {
             let row = rows[i];
             if(!row || row.length === 0) continue;
             let username = row[0] ? String(row[0]).trim() : "";
             if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
             if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
-                users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
+                let newUser = { id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" };
+                users.push(newUser);
+                newUsers.push(newUser);
                 added++;
             }
         }
-        if(added > 0) { await syncUsers(); renderAll(); showToast(`${added} user(s) added`); }
-        else { showToast("No valid users found", "error"); }
+        
+        if(added > 0) { 
+            // ذخیره در Supabase
+            for(let u of newUsers) {
+                try {
+                    await supabase.from('users').upsert(u, { onConflict: 'id' });
+                } catch(e) { console.warn(e); }
+            }
+            saveUsersToStorage();
+            renderAll(); 
+            showToast(`${added} user(s) added to Supabase!`); 
+        } else { 
+            showToast("No valid users found", "error"); 
+        }
         input.value = '';
     };
     reader.readAsArrayBuffer(file);

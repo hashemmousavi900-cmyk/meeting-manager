@@ -3,132 +3,480 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تست Supabase - روش مستقیم API</title>
+    <title>تست کامل Supabase - همه جداول</title>
     <style>
-        body { font-family: Tahoma; max-width: 600px; margin: 50px auto; padding: 20px; }
-        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        button { background: #059669; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
-        .result { background: #f0fdf4; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 13px; }
+        body { font-family: Tahoma; max-width: 800px; margin: 30px auto; padding: 20px; background: linear-gradient(135deg, #e0f2fe, #dcfce7); }
+        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        button { background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; margin: 5px; }
+        button:hover { background: #047857; }
+        .result { background: #f0fdf4; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 13px; max-height: 300px; overflow-y: auto; }
         .error { background: #fee2e2; color: #dc2626; }
         .success { background: #d1fae5; color: #065f46; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        h3 { color: #065f46; margin-bottom: 10px; border-bottom: 2px solid #a7f3d0; padding-bottom: 8px; }
+        .flex { display: flex; gap: 10px; flex-wrap: wrap; }
+        .table-name { background: #e6f7ec; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
+        hr { margin: 15px 0; }
     </style>
 </head>
 <body>
 
+<h2 style="text-align: center; color: #065f46;">📡 تست کامل Supabase</h2>
+
+<!-- ========== بخش USERS ========== -->
 <div class="card">
-    <h2>📡 تست مستقیم API Supabase</h2>
-    <p>این روش بدون نیاز به کتابخانه و با استفاده از fetch کار می‌کند.</p>
-    <div id="status"></div>
+    <h3>👥 1. جدول USERS (پرسنل)</h3>
+    <div class="flex">
+        <button onclick="testReadUsers()">📖 خواندن کاربران</button>
+        <button onclick="testAddUser()">➕ افزودن کاربر نمونه</button>
+        <button onclick="testDeleteLastUser()">🗑️ حذف آخرین کاربر</button>
+    </div>
+    <div id="usersResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
+<!-- ========== بخش MEETINGS ========== -->
 <div class="card">
-    <h3>📖 خواندن کاربران</h3>
-    <button onclick="readUsers()">خواندن کاربران</button>
-    <div id="readResult" class="result">برای تست کلیک کنید...</div>
+    <h3>📅 2. جدول MEETINGS (جلسات)</h3>
+    <div class="flex">
+        <button onclick="testReadMeetings()">📖 خواندن جلسات</button>
+        <button onclick="testAddMeeting()">➕ افزودن جلسه نمونه</button>
+        <button onclick="testDeleteLastMeeting()">🗑️ حذف آخرین جلسه</button>
+    </div>
+    <div id="meetingsResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
+<!-- ========== بخش TASKS ========== -->
 <div class="card">
-    <h3>✏️ افزودن کاربر</h3>
-    <input type="text" id="userName" placeholder="نام کاربر">
-    <button onclick="addUser()">افزودن کاربر</button>
-    <div id="writeResult" class="result">برای تست کلیک کنید...</div>
+    <h3>✅ 3. جدول TASKS (وظایف و یادآوری‌ها)</h3>
+    <div class="flex">
+        <button onclick="testReadTasks()">📖 خواندن وظایف</button>
+        <button onclick="testAddTask()">➕ افزودن وظیفه نمونه</button>
+        <button onclick="testAddReminder()">⏰ افزودن یادآوری نمونه</button>
+        <button onclick="testDeleteLastTask()">🗑️ حذف آخرین آیتم</button>
+    </div>
+    <div id="tasksResult" class="result">برای تست کلیک کنید...</div>
+</div>
+
+<!-- ========== بخش STORAGE (عکس) ========== -->
+<div class="card">
+    <h3>🖼️ 4. تست Storage (عکس کاربران)</h3>
+    <div>
+        <input type="text" id="photoUsername" placeholder="نام کاربر (مثال: احمد)" style="width: 70%; display: inline-block;">
+        <button onclick="testGetPhotoUrl()">🔍 بررسی آدرس عکس</button>
+    </div>
+    <div id="storageResult" class="result">برای تست کلیک کنید...</div>
+    <div class="table-name" style="margin-top: 10px;">💡 نکته: عکس‌ها باید در مسیر <code>user-photos/نام کاربر.png</code> آپلود شوند</div>
 </div>
 
 <script>
+// ========== تنظیمات Supabase ==========
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-async function readUsers() {
-    const resultDiv = document.getElementById('readResult');
-    resultDiv.innerHTML = 'در حال خواندن...';
-    resultDiv.className = 'result';
+// هدرهای مشترک برای درخواست‌ها
+const headers = {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json'
+};
+
+// ========== توابع کمکی ==========
+function showResult(elementId, message, isError = false) {
+    const element = document.getElementById(elementId);
+    element.innerHTML = message;
+    element.className = `result ${isError ? 'error' : 'success'}`;
+}
+
+// ========== 1. تست USERS ==========
+async function testReadUsers() {
+    const resultDiv = document.getElementById('usersResult');
+    resultDiv.innerHTML = 'در حال خواندن کاربران...';
     
     try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*`, {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&order=id.desc`, {
             method: 'GET',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
+            headers: headers
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const data = await response.json();
         
         if (data.length === 0) {
-            resultDiv.innerHTML = '📭 هیچ کاربری یافت نشد. ابتدا یک کاربر اضافه کنید.';
-            resultDiv.className = 'result';
+            showResult('usersResult', '📭 هیچ کاربری یافت نشد.', false);
         } else {
-            let html = '<strong>✅ لیست کاربران:</strong><br><br>';
+            let html = '<strong>✅ لیست کاربران در Supabase:</strong><br><br>';
             data.forEach(user => {
-                html += `• ${user.username} (ID: ${user.id})<br>`;
+                html += `<div style="border-bottom:1px solid #e5e7eb; padding:5px 0;">
+                    🧑 <strong>${user.username}</strong><br>
+                    📧 ${user.email || 'بدون ایمیل'} | 🆔 ID: ${user.id}
+                </div>`;
             });
-            html += `<br><strong>تعداد کل:</strong> ${data.length} کاربر`;
-            resultDiv.innerHTML = html;
-            resultDiv.className = 'result success';
+            html += `<br><strong>📊 تعداد کل:</strong> ${data.length} کاربر`;
+            showResult('usersResult', html, false);
         }
-        
     } catch(error) {
-        resultDiv.innerHTML = `❌ خطا: ${error.message}`;
-        resultDiv.className = 'result error';
+        showResult('usersResult', `❌ خطا: ${error.message}`, true);
     }
 }
 
-async function addUser() {
-    const username = document.getElementById('userName').value.trim();
-    const resultDiv = document.getElementById('writeResult');
+async function testAddUser() {
+    const resultDiv = document.getElementById('usersResult');
+    const newUsername = `تست_${Date.now().toString().slice(-6)}`;
     
-    if (!username) {
-        resultDiv.innerHTML = '❌ لطفا نام کاربر را وارد کنید!';
-        resultDiv.className = 'result error';
-        return;
-    }
-    
-    resultDiv.innerHTML = 'در حال افزودن...';
-    resultDiv.className = 'result';
+    resultDiv.innerHTML = 'در حال افزودن کاربر...';
     
     try {
         const newUser = {
             id: Date.now(),
-            username: username,
-            email: ''
+            username: newUsername,
+            email: `test${Date.now()}@example.com`
         };
         
         const response = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
             method: 'POST',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
+            headers: headers,
             body: JSON.stringify(newUser)
         });
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
-        resultDiv.innerHTML = `✅ کاربر "${username}" با موفقیت به Supabase اضافه شد!`;
-        resultDiv.className = 'result success';
-        document.getElementById('userName').value = '';
-        
-        // به‌روزرسانی لیست
-        setTimeout(() => readUsers(), 500);
+        showResult('usersResult', `✅ کاربر "${newUsername}" با موفقیت اضافه شد!`, false);
+        setTimeout(() => testReadUsers(), 500);
         
     } catch(error) {
-        resultDiv.innerHTML = `❌ خطا: ${error.message}`;
-        resultDiv.className = 'result error';
+        showResult('usersResult', `❌ خطا: ${error.message}`, true);
     }
 }
 
-// تست اولیه
-readUsers();
+async function testDeleteLastUser() {
+    const resultDiv = document.getElementById('usersResult');
+    resultDiv.innerHTML = 'در حال یافتن آخرین کاربر...';
+    
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username&order=id.desc&limit=1`, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const users = await response.json();
+        
+        if (users.length === 0) {
+            showResult('usersResult', '📭 هیچ کاربری برای حذف وجود ندارد!', true);
+            return;
+        }
+        
+        const userToDelete = users[0];
+        
+        const deleteResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userToDelete.id}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        
+        if (!deleteResponse.ok) throw new Error(`HTTP ${deleteResponse.status}`);
+        
+        showResult('usersResult', `✅ کاربر "${userToDelete.username}" حذف شد!`, false);
+        setTimeout(() => testReadUsers(), 500);
+        
+    } catch(error) {
+        showResult('usersResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+// ========== 2. تست MEETINGS ==========
+async function testReadMeetings() {
+    const resultDiv = document.getElementById('meetingsResult');
+    resultDiv.innerHTML = 'در حال خواندن جلسات...';
+    
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/meetings?select=*&order=id.desc`, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data.length === 0) {
+            showResult('meetingsResult', '📭 هیچ جلسه‌ای یافت نشد.', false);
+        } else {
+            let html = '<strong>✅ لیست جلسات در Supabase:</strong><br><br>';
+            data.forEach(meeting => {
+                html += `<div style="border-bottom:1px solid #e5e7eb; padding:5px 0;">
+                    📅 <strong>${meeting.date || 'بدون تاریخ'}</strong> - ${meeting.time || 'بدون زمان'} <br>
+                    👤 ${meeting.userName || `کاربر ID: ${meeting.userId}`} <br>
+                    ⏱️ ${meeting.duration} دقیقه | 🏷️ ${meeting.type} <br>
+                    📝 ${(meeting.mom || '').substring(0, 50)}${(meeting.mom || '').length > 50 ? '...' : ''}
+                </div>`;
+            });
+            html += `<br><strong>📊 تعداد کل:</strong> ${data.length} جلسه`;
+            showResult('meetingsResult', html, false);
+        }
+    } catch(error) {
+        showResult('meetingsResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+async function testAddMeeting() {
+    const resultDiv = document.getElementById('meetingsResult');
+    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date().toTimeString().slice(0, 5);
+    
+    resultDiv.innerHTML = 'در حال افزودن جلسه...';
+    
+    try {
+        const newMeeting = {
+            id: Date.now(),
+            userId: 1,
+            userName: "کاربر تست",
+            date: today,
+            time: now,
+            duration: 45,
+            type: "Team",
+            mom: "این یک جلسه تستی است که از طریق API اضافه شده است."
+        };
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(newMeeting)
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        showResult('meetingsResult', `✅ جلسه تستی با موفقیت اضافه شد!`, false);
+        setTimeout(() => testReadMeetings(), 500);
+        
+    } catch(error) {
+        showResult('meetingsResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+async function testDeleteLastMeeting() {
+    const resultDiv = document.getElementById('meetingsResult');
+    resultDiv.innerHTML = 'در حال یافتن آخرین جلسه...';
+    
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/meetings?select=id&order=id.desc&limit=1`, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const meetings = await response.json();
+        
+        if (meetings.length === 0) {
+            showResult('meetingsResult', '📭 هیچ جلسه‌ای برای حذف وجود ندارد!', true);
+            return;
+        }
+        
+        const deleteResponse = await fetch(`${SUPABASE_URL}/rest/v1/meetings?id=eq.${meetings[0].id}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        
+        if (!deleteResponse.ok) throw new Error(`HTTP ${deleteResponse.status}`);
+        
+        showResult('meetingsResult', `✅ آخرین جلسه حذف شد!`, false);
+        setTimeout(() => testReadMeetings(), 500);
+        
+    } catch(error) {
+        showResult('meetingsResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+// ========== 3. تست TASKS ==========
+async function testReadTasks() {
+    const resultDiv = document.getElementById('tasksResult');
+    resultDiv.innerHTML = 'در حال خواندن وظایف...';
+    
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/tasks?select=*&order=id.desc`, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data.length === 0) {
+            showResult('tasksResult', '📭 هیچ وظیفه یا یادآوری‌ای یافت نشد.', false);
+        } else {
+            let html = '<strong>✅ لیست وظایف و یادآوری‌ها در Supabase:</strong><br><br>';
+            data.forEach(item => {
+                const icon = item.type === 'task' ? '✅' : '⏰';
+                html += `<div style="border-bottom:1px solid #e5e7eb; padding:5px 0;">
+                    ${icon} <strong>${item.title}</strong> (${item.type === 'task' ? 'وظیفه' : 'یادآوری'})<br>
+                    📅 ${item.date || 'بدون تاریخ'} | ⏰ ${item.time || 'بدون زمان'}<br>
+                    ${item.priority ? `🎯 اولویت: ${item.priority}<br>` : ''}
+                    ${item.description ? `📝 ${item.description.substring(0, 50)}${item.description.length > 50 ? '...' : ''}<br>` : ''}
+                    🏷️ وضعیت: ${item.completed ? '✓ انجام شده' : '○ انجام نشده'}
+                </div>`;
+            });
+            html += `<br><strong>📊 تعداد کل:</strong> ${data.length} آیتم`;
+            showResult('tasksResult', html, false);
+        }
+    } catch(error) {
+        showResult('tasksResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+async function testAddTask() {
+    const resultDiv = document.getElementById('tasksResult');
+    const today = new Date().toISOString().slice(0, 10);
+    
+    resultDiv.innerHTML = 'در حال افزودن وظیفه...';
+    
+    try {
+        const newTask = {
+            id: Date.now(),
+            type: "task",
+            title: `وظیفه تست ${new Date().toLocaleTimeString()}`,
+            date: today,
+            time: "14:00",
+            priority: "high",
+            description: null,
+            completed: false
+        };
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(newTask)
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        showResult('tasksResult', `✅ وظیفه "${newTask.title}" با موفقیت اضافه شد!`, false);
+        setTimeout(() => testReadTasks(), 500);
+        
+    } catch(error) {
+        showResult('tasksResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+async function testAddReminder() {
+    const resultDiv = document.getElementById('tasksResult');
+    const today = new Date().toISOString().slice(0, 10);
+    
+    resultDiv.innerHTML = 'در حال افزودن یادآوری...';
+    
+    try {
+        const newReminder = {
+            id: Date.now(),
+            type: "reminder",
+            title: `یادآوری تست ${new Date().toLocaleTimeString()}`,
+            date: today,
+            time: "09:30",
+            priority: null,
+            description: "این یک یادآوری تستی است.",
+            completed: false
+        };
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(newReminder)
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        showResult('tasksResult', `✅ یادآوری "${newReminder.title}" با موفقیت اضافه شد!`, false);
+        setTimeout(() => testReadTasks(), 500);
+        
+    } catch(error) {
+        showResult('tasksResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+async function testDeleteLastTask() {
+    const resultDiv = document.getElementById('tasksResult');
+    resultDiv.innerHTML = 'در حال یافتن آخرین آیتم...';
+    
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/tasks?select=id&order=id.desc&limit=1`, {
+            method: 'GET',
+            headers: headers
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const items = await response.json();
+        
+        if (items.length === 0) {
+            showResult('tasksResult', '📭 هیچ آیتمی برای حذف وجود ندارد!', true);
+            return;
+        }
+        
+        const deleteResponse = await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${items[0].id}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        
+        if (!deleteResponse.ok) throw new Error(`HTTP ${deleteResponse.status}`);
+        
+        showResult('tasksResult', `✅ آخرین آیتم حذف شد!`, false);
+        setTimeout(() => testReadTasks(), 500);
+        
+    } catch(error) {
+        showResult('tasksResult', `❌ خطا: ${error.message}`, true);
+    }
+}
+
+// ========== 4. تست Storage (عکس) ==========
+function testGetPhotoUrl() {
+    const username = document.getElementById('photoUsername').value.trim();
+    const resultDiv = document.getElementById('storageResult');
+    
+    if (!username) {
+        showResult('storageResult', '❌ لطفا نام کاربر را وارد کنید!', true);
+        return;
+    }
+    
+    const fileName = username.replace(/\s/g, '').toLowerCase();
+    const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/user-photos/${fileName}.png`;
+    
+    let html = `
+        <strong>🔍 آدرس عکس برای کاربر "${username}":</strong><br><br>
+        📁 نام فایل: ${fileName}.png<br>
+        🔗 آدرس کامل: <a href="${photoUrl}" target="_blank">${photoUrl}</a><br><br>
+        <div class="table-name" style="background: #fef3c7;">
+        💡 نکات مهم:<br>
+        • عکس باید با نام ${fileName}.png در باکت <strong>user-photos</strong> آپلود شود<br>
+        • باکت باید عمومی (Public) باشد<br>
+        • اگر عکس وجود داشته باشد، در لینک بالا قابل مشاهده است
+        </div>
+    `;
+    
+    // تست وجود عکس با fetch
+    fetch(photoUrl, { method: 'HEAD' })
+        .then(response => {
+            if (response.ok) {
+                html = `<strong>✅ عکس یافت شد!</strong><br><br>` + html;
+                html += `<br><div class="table-name" style="background: #d1fae5;">✅ عکس ${fileName}.png در Storage وجود دارد</div>`;
+            } else {
+                html = `<strong>⚠️ عکس یافت نشد!</strong><br><br>` + html;
+                html += `<br><div class="table-name" style="background: #fee2e2;">❌ عکس ${fileName}.png در Storage وجود ندارد. لطفاً عکس را آپلود کنید.</div>`;
+            }
+            showResult('storageResult', html, false);
+        })
+        .catch(() => {
+            html = `<strong>⚠️ عکس یافت نشد!</strong><br><br>` + html;
+            html += `<br><div class="table-name" style="background: #fee2e2;">❌ عکس ${fileName}.png در Storage وجود ندارد یا باکت عمومی نیست.</div>`;
+            showResult('storageResult', html, false);
+        });
+}
+
+// ========== اجرای اولیه ==========
+console.log('صفحه تست بارگذاری شد');
+testReadUsers();
+testReadMeetings();
+testReadTasks();
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meeting Manager | Supabase Edition</title>
+    <title>Meeting Manager | Professional Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -11,18 +11,19 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { font-family: 'Poppins', sans-serif; }
-        body { background: linear-gradient(135deg, #e0f2fe, #dcfce7); }
+        * { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #e0f2fe, #dcfce7); min-height: 100vh; }
         
         .sidebar {
+            width: 280px;
             background: linear-gradient(180deg, #e6f7ec, #d1fae5);
             border-right: 1px solid #a7f3d0;
-            width: 280px;
+            height: 100vh;
             position: fixed;
             left: 0;
             top: 0;
-            bottom: 0;
             overflow-y: auto;
+            z-index: 100;
         }
         
         .sidebar-link {
@@ -54,14 +55,18 @@
             border: none;
             cursor: pointer;
             font-weight: 500;
+            transition: all 0.2s;
         }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5,150,105,0.3); }
         
         .stat-card {
             background: rgba(255,255,255,0.95);
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
+        .stat-card:hover { transform: translateY(-3px); }
         
         .users-grid {
             display: grid;
@@ -76,7 +81,9 @@
             padding: 18px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             border: 1px solid #e5e7eb;
+            transition: all 0.2s;
         }
+        .user-card:hover { transform: translateY(-5px); }
         
         .modal {
             display: none;
@@ -112,6 +119,7 @@
             gap: 10px;
             z-index: 1100;
             animation: fadeOut 2.5s forwards;
+            font-size: 13px;
         }
         
         @keyframes fadeOut {
@@ -151,6 +159,13 @@
         .mb-2 { margin-bottom: 8px; }
         .mb-4 { margin-bottom: 16px; }
         .text-center { text-align: center; }
+        
+        @media (max-width: 768px) {
+            .sidebar { width: 80px; }
+            .sidebar-link span { display: none; }
+            .main-content { margin-left: 80px; }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
     </style>
 </head>
 <body>
@@ -161,12 +176,15 @@
         <p style="font-size: 10px; color: #047857;">Management System</p>
     </div>
     <nav>
-        <div class="sidebar-link active" data-tab="dashboard"><i class="fas fa-chart-pie"></i> Dashboard</div>
-        <div class="sidebar-link" data-tab="users"><i class="fas fa-users"></i> Users</div>
-        <div class="sidebar-link" data-tab="meetings"><i class="fas fa-calendar-check"></i> Meetings</div>
-        <div class="sidebar-link" data-tab="tasks"><i class="fas fa-tasks"></i> Tasks</div>
-        <div class="sidebar-link" data-tab="reports"><i class="fas fa-chart-line"></i> Reports</div>
+        <div class="sidebar-link active" data-tab="dashboard"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
+        <div class="sidebar-link" data-tab="users"><i class="fas fa-users"></i> <span>Users</span></div>
+        <div class="sidebar-link" data-tab="meetings"><i class="fas fa-calendar-check"></i> <span>Meetings</span></div>
+        <div class="sidebar-link" data-tab="tasks"><i class="fas fa-tasks"></i> <span>Tasks & Reminders</span></div>
+        <div class="sidebar-link" data-tab="reports"><i class="fas fa-chart-line"></i> <span>Reports</span></div>
     </nav>
+    <div style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; padding: 15px; border-top: 1px solid #a7f3d0; margin: 0 15px; font-size: 10px; color: #047857;">
+        <i class="fas fa-cloud-upload-alt"></i> Cloud Sync
+    </div>
 </div>
 
 <div class="main-content">
@@ -210,7 +228,8 @@
             <input type="number" id="meetingDuration" placeholder="Duration (min)" class="form-input">
             <select id="meetingType" class="form-input">
                 <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
-                <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
+                <option value="Disciplinary">⚖️ Disciplinary</option>
+                <option value="CLF">📊 CLF</option>
                 <option value="Project Review">📁 Project Review</option>
             </select>
             <textarea id="meetingMom" rows="3" placeholder="MOM..." class="form-input"></textarea>
@@ -247,12 +266,19 @@
 <div id="scheduleModal" class="modal"><div class="modal-content"><div id="scheduleModalBody"></div></div></div>
 
 <script>
-// ========== Supabase Config ==========
+// ========== تنظیمات Supabase - فقط یک بار ==========
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('✅ Supabase client created');
+// ایجاد کلاینت - فقط یک بار
+let supabase;
+try {
+    supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase connected');
+} catch(e) {
+    console.error('Supabase error:', e);
+    supabase = null;
+}
 
 let users = [], meetings = [], tasks = [];
 let chart1 = null, chart2 = null;
@@ -268,9 +294,8 @@ function showToast(msg) {
 
 function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
 function getInitial(n) { return n ? n.charAt(0).toUpperCase() : "?"; }
-function getPhotoUrl(username) { if (!username) return null; return `${SUPABASE_URL}/storage/v1/object/public/user-photos/${username.replace(/\s/g, '').toLowerCase()}.png`; }
 
-// ========== Menu - این بخش بسیار مهم است ==========
+// ========== Menu - مهمترین بخش ==========
 document.querySelectorAll('.sidebar-link').forEach(link => {
     link.addEventListener('click', function(e) {
         e.preventDefault();
@@ -297,24 +322,24 @@ console.log('Menu listeners added');
 
 // ========== Load from Supabase ==========
 async function loadUsers() {
+    if (!supabase) {
+        console.error('Supabase not available');
+        useSampleUsers();
+        return;
+    }
+    
     try {
         console.log('Loading users from Supabase...');
         const { data, error } = await supabase.from('users').select('*');
         
         if (error) {
             console.error('Supabase error:', error);
-            showToast('Error loading users from Supabase!', 'error');
+            useSampleUsers();
         } else if (data && data.length > 0) {
             users = data;
             console.log(`✅ Loaded ${users.length} users from Supabase`);
         } else {
-            console.log('No users found in Supabase, using sample data');
-            users = [
-                { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
-                { id: 2, username: "سارا محمدی", email: "sara@example.com" },
-                { id: 3, username: "رضا کریمی", email: "reza@example.com" }
-            ];
-            await syncUsers();
+            useSampleUsers();
         }
         renderUsersList();
         renderUsersCards();
@@ -322,73 +347,69 @@ async function loadUsers() {
         updateCounts();
     } catch(e) {
         console.error('Connection error:', e);
-        showToast('Cannot connect to Supabase!', 'error');
+        useSampleUsers();
     }
+}
+
+function useSampleUsers() {
+    users = [
+        { id: 1, username: "احمد رضایی", email: "ahmad@example.com" },
+        { id: 2, username: "سارا محمدی", email: "sara@example.com" },
+        { id: 3, username: "رضا کریمی", email: "reza@example.com" }
+    ];
+    console.log('Using sample users');
 }
 
 async function loadMeetings() {
+    if (!supabase) return;
     try {
         const { data, error } = await supabase.from('meetings').select('*');
-        if (error) throw error;
-        meetings = data || [];
-        console.log(`✅ Loaded ${meetings.length} meetings from Supabase`);
+        if (!error && data) meetings = data;
         renderUsersCards();
         updateDashboardAndCharts();
         updateCounts();
-    } catch(e) {
-        console.error('Error loading meetings:', e);
-        meetings = [];
-    }
+    } catch(e) { console.error(e); }
 }
 
 async function loadTasks() {
+    if (!supabase) return;
     try {
         const { data, error } = await supabase.from('tasks').select('*');
-        if (error) throw error;
-        tasks = data || [];
+        if (!error && data) tasks = data;
         if (tasks.length === 0) {
             let today = new Date().toISOString().slice(0,10);
             tasks = [
                 { id: 1, type: "task", title: "Review reports", date: today, time: "14:00", priority: "high", completed: false },
                 { id: 2, type: "reminder", title: "Team meeting", date: today, time: "09:30", description: "Prepare slides", completed: false }
             ];
-            await syncTasks();
         }
-        console.log(`✅ Loaded ${tasks.length} tasks from Supabase`);
         renderTasksAndReminders();
-    } catch(e) {
-        console.error('Error loading tasks:', e);
-        tasks = [];
-    }
+    } catch(e) { console.error(e); }
 }
 
 async function syncUsers() {
-    try {
-        for(let u of users) {
-            await supabase.from('users').upsert(u, { onConflict: 'id' });
-        }
-        console.log('Users synced to Supabase');
-    } catch(e) { console.error(e); }
+    if (!supabase) return;
+    for(let u of users) {
+        await supabase.from('users').upsert(u, { onConflict: 'id' });
+    }
 }
 
 async function syncMeetings() {
-    try {
-        for(let m of meetings) {
-            await supabase.from('meetings').upsert(m, { onConflict: 'id' });
-        }
-    } catch(e) { console.error(e); }
+    if (!supabase) return;
+    for(let m of meetings) {
+        await supabase.from('meetings').upsert(m, { onConflict: 'id' });
+    }
 }
 
 async function syncTasks() {
-    try {
-        for(let t of tasks) {
-            await supabase.from('tasks').upsert(t, { onConflict: 'id' });
-        }
-    } catch(e) { console.error(e); }
+    if (!supabase) return;
+    for(let t of tasks) {
+        await supabase.from('tasks').upsert(t, { onConflict: 'id' });
+    }
 }
 
 // ========== User CRUD ==========
-function openAddUserModal() { document.getElementById('addUserModal').style.display = 'flex'; document.getElementById('newUsername').value = ''; }
+function openAddUserModal() { document.getElementById('addUserModal').style.display = 'flex'; }
 function closeAddUserModal() { document.getElementById('addUserModal').style.display = 'none'; }
 
 async function saveNewUser() {
@@ -404,7 +425,7 @@ async function saveNewUser() {
     renderUsersCards();
     renderUserSelect();
     updateCounts();
-    showToast(`✅ User "${username}" added to Supabase`);
+    showToast(`✅ User "${username}" added`);
 }
 
 async function deleteUser(id) {
@@ -419,79 +440,6 @@ async function deleteUser(id) {
     updateCounts();
     showToast("User deleted");
 }
-
-// ========== Render Functions ==========
-function renderUsersList() {
-    let container = document.getElementById('usersListContainer');
-    if (!container) return;
-    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
-    
-    container.innerHTML = users.map(u => `
-        <div class="user-card">
-            <div class="flex"><div class="avatar">${getInitial(u.username)}</div>
-            <div><div class="font-bold">${escapeHtml(u.username)}</div><div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} meetings</div></div></div>
-            <div class="flex mt-3"><button onclick="openEditUserModal(${u.id})" class="btn-primary flex-1" style="background:#3b82f6;">Edit</button><button onclick="deleteUser(${u.id})" class="btn-primary flex-1" style="background:#ef4444;">Delete</button></div>
-        </div>
-    `).join('');
-}
-
-function renderUsersCards() {
-    let container = document.getElementById('usersCardsContainer');
-    if (!container) return;
-    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
-    
-    container.innerHTML = users.map(u => `
-        <div class="user-card">
-            <div class="flex"><div class="avatar">${getInitial(u.username)}</div><div><div class="font-bold">${escapeHtml(u.username)}</div><div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} meetings</div></div></div>
-            <div class="flex mt-3"><button onclick="selectUserForMeeting(${u.id})" class="btn-primary flex-1">Set Meeting</button><button onclick="showUserDetails(${u.id})" class="btn-primary flex-1" style="background:#3b82f6;">Details</button></div>
-        </div>
-    `).join('');
-}
-
-function selectUserForMeeting(id) {
-    document.getElementById('meetingUserSelect').value = id;
-    document.getElementById('meetingDateTime').focus();
-    showToast("Fill meeting details and click Save");
-}
-
-function renderUserSelect() {
-    let sel = document.getElementById('meetingUserSelect');
-    if (sel) sel.innerHTML = '<option value="">-- Select User --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
-}
-
-function showUserDetails(id) {
-    let user = users.find(u => u.id === id);
-    let userMeetings = meetings.filter(m => m.userId === id);
-    document.getElementById('modalTitle').innerHTML = `📅 ${escapeHtml(user.username)} - ${userMeetings.length} meetings`;
-    if (userMeetings.length === 0) { document.getElementById('modalBody').innerHTML = '<div class="text-center text-gray-400 py-6">No meetings</div>'; }
-    else { document.getElementById('modalBody').innerHTML = userMeetings.map(m => `<div class="border-b pb-2 mb-2"><div class="font-bold">${m.date} ${m.time}</div><div class="text-sm">${m.duration} min • ${m.type}</div><div class="text-xs text-gray-600 mt-1">📝 ${escapeHtml(m.mom.substring(0,100))}</div><button onclick="deleteMeeting(${m.id})" class="text-red-500 text-xs mt-1">Delete</button></div>`).join(''); }
-    document.getElementById('userModal').style.display = 'flex';
-}
-
-function closeModal() { document.getElementById('userModal').style.display = 'none'; }
-
-async function deleteMeeting(id) {
-    if (confirm("Delete meeting?")) { meetings = meetings.filter(m => m.id !== id); await syncMeetings(); closeModal(); renderUsersCards(); updateDashboardAndCharts(); updateCounts(); showToast("Meeting deleted"); }
-}
-
-function openEditUserModal(id) {
-    let user = users.find(u => u.id === id);
-    if (!user) return;
-    let html = `<input type="text" id="editUsername" value="${escapeHtml(user.username)}" class="form-input"><input type="email" id="editEmail" value="${escapeHtml(user.email||'')}" class="form-input"><div class="flex gap-2 mt-4"><button onclick="saveEditedUser(${id})" class="btn-primary flex-1">Save</button><button onclick="closeEditUserModal()" class="btn-primary flex-1" style="background:#6b7280;">Cancel</button></div>`;
-    document.getElementById('editUserModalBody').innerHTML = html;
-    document.getElementById('editUserModal').style.display = 'flex';
-}
-
-async function saveEditedUser(id) {
-    let newUsername = document.getElementById('editUsername').value.trim();
-    let newEmail = document.getElementById('editEmail').value.trim();
-    if (!newUsername) { showToast("Username required!"); return; }
-    let idx = users.findIndex(u => u.id === id);
-    if (idx !== -1) { users[idx].username = newUsername; users[idx].email = newEmail; await syncUsers(); meetings.forEach(m => { if (m.userId === id) m.userName = newUsername; }); await syncMeetings(); renderAll(); showToast("User updated"); }
-    closeEditUserModal();
-}
-
-function closeEditUserModal() { document.getElementById('editUserModal').style.display = 'none'; }
 
 // ========== Meeting CRUD ==========
 async function addMeeting() {
@@ -514,6 +462,58 @@ async function addMeeting() {
     updateDashboardAndCharts();
     updateCounts();
     showToast(`Meeting scheduled for ${user.username}`);
+}
+
+function selectUserForMeeting(id) {
+    document.getElementById('meetingUserSelect').value = id;
+    document.getElementById('meetingDateTime').focus();
+    showToast("Fill meeting details and click Save");
+}
+
+// ========== Render Functions ==========
+function renderUsersList() {
+    let container = document.getElementById('usersListContainer');
+    if (!container) return;
+    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
+    
+    container.innerHTML = users.map(u => `
+        <div class="user-card">
+            <div class="flex"><div class="avatar">${getInitial(u.username)}</div>
+            <div><div class="font-bold">${escapeHtml(u.username)}</div><div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} meetings</div></div></div>
+            <div class="flex mt-3"><button onclick="deleteUser(${u.id})" class="btn-primary flex-1" style="background:#ef4444;">Delete</button></div>
+        </div>
+    `).join('');
+}
+
+function renderUsersCards() {
+    let container = document.getElementById('usersCardsContainer');
+    if (!container) return;
+    if (users.length === 0) { container.innerHTML = "<div class='text-center text-gray-400 py-10'>No users</div>"; return; }
+    
+    container.innerHTML = users.map(u => `
+        <div class="user-card">
+            <div class="flex"><div class="avatar">${getInitial(u.username)}</div><div><div class="font-bold">${escapeHtml(u.username)}</div><div class="text-sm text-gray-500">${meetings.filter(m => m.userId === u.id).length} meetings</div></div></div>
+            <div class="flex mt-3"><button onclick="selectUserForMeeting(${u.id})" class="btn-primary flex-1">Set Meeting</button></div>
+        </div>
+    `).join('');
+}
+
+function renderUserSelect() {
+    let sel = document.getElementById('meetingUserSelect');
+    if (sel) sel.innerHTML = '<option value="">-- Select User --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
+}
+
+function renderTasksAndReminders() {
+    let tasksDiv = document.getElementById('tasksListContainer');
+    let remindersDiv = document.getElementById('remindersListContainer');
+    if (!tasksDiv) return;
+    let taskList = tasks.filter(t => t.type === 'task');
+    let reminderList = tasks.filter(t => t.type === 'reminder');
+    document.getElementById('taskCount').innerText = taskList.length;
+    document.getElementById('reminderCount').innerText = reminderList.length;
+    let today = new Date().toISOString().slice(0,10);
+    tasksDiv.innerHTML = taskList.length ? taskList.map(t => `<div class="user-card mb-2 ${t.completed ? 'opacity-50' : ''}"><div class="flex-between"><div><div class="font-bold">✅ ${escapeHtml(t.title)} ${t.date === today ? '<span class="text-red-500 text-xs">🔔</span>' : ''}</div><div class="text-xs text-gray-500">${t.date} ${t.time}</div></div><div class="flex">${!t.completed ? `<button onclick="markTaskComplete(${t.id})" class="text-green-500"><i class="fas fa-check"></i></button>` : ''}<button onclick="deleteTask(${t.id})" class="text-red-500"><i class="fas fa-trash"></i></button></div></div></div>`).join('') : '<div class="text-center text-gray-400 py-5">No tasks</div>';
+    remindersDiv.innerHTML = reminderList.length ? reminderList.map(r => `<div class="user-card mb-2"><div><div class="font-bold">⏰ ${escapeHtml(r.title)} ${r.date === today ? '<span class="text-red-500 text-xs">🔔</span>' : ''}</div><div class="text-xs text-gray-500">${r.date} ${r.time}</div><div class="text-xs text-gray-500 mt-1">📝 ${escapeHtml(r.description || '')}</div></div></div>`).join('') : '<div class="text-center text-gray-400 py-5">No reminders</div>';
 }
 
 // ========== Group Meeting ==========
@@ -547,7 +547,7 @@ async function saveGroupMeeting() {
     showToast(`Group meeting saved for ${checks.length} users`);
 }
 
-// ========== Tasks ==========
+// ========== Tasks Functions ==========
 function toggleTaskFields() { let type = document.getElementById('itemType').value; document.getElementById('taskPriority').style.display = type === 'task' ? 'block' : 'none'; document.getElementById('reminderDesc').style.display = type === 'reminder' ? 'block' : 'none'; }
 
 async function addTaskOrReminder() {
@@ -581,20 +581,7 @@ async function markTaskComplete(id) {
     if (item) { item.completed = true; await syncTasks(); renderTasksAndReminders(); showToast(`"${item.title}" completed`); }
 }
 
-function renderTasksAndReminders() {
-    let tasksDiv = document.getElementById('tasksListContainer');
-    let remindersDiv = document.getElementById('remindersListContainer');
-    if (!tasksDiv) return;
-    let taskList = tasks.filter(t => t.type === 'task');
-    let reminderList = tasks.filter(t => t.type === 'reminder');
-    document.getElementById('taskCount').innerText = taskList.length;
-    document.getElementById('reminderCount').innerText = reminderList.length;
-    let today = new Date().toISOString().slice(0,10);
-    tasksDiv.innerHTML = taskList.length ? taskList.map(t => `<div class="user-card mb-2 ${t.completed ? 'opacity-50' : ''}"><div class="flex-between"><div><div class="font-bold">✅ ${escapeHtml(t.title)} ${t.date === today ? '<span class="text-red-500 text-xs">🔔</span>' : ''}</div><div class="text-xs text-gray-500">${t.date} ${t.time}</div></div><div class="flex">${!t.completed ? `<button onclick="markTaskComplete(${t.id})" class="text-green-500"><i class="fas fa-check"></i></button>` : ''}<button onclick="deleteTask(${t.id})" class="text-red-500"><i class="fas fa-trash"></i></button></div></div></div>`).join('') : '<div class="text-center text-gray-400 py-5">No tasks</div>';
-    remindersDiv.innerHTML = reminderList.length ? reminderList.map(r => `<div class="user-card mb-2"><div><div class="font-bold">⏰ ${escapeHtml(r.title)} ${r.date === today ? '<span class="text-red-500 text-xs">🔔</span>' : ''}</div><div class="text-xs text-gray-500">${r.date} ${r.time}</div><div class="text-xs text-gray-500 mt-1">📝 ${escapeHtml(r.description || '')}</div></div></div>`).join('') : '<div class="text-center text-gray-400 py-5">No reminders</div>';
-}
-
-// ========== Excel Upload to Supabase ==========
+// ========== Excel Upload ==========
 async function handleExcelUpload(input) {
     let file = input.files[0];
     if (!file) return;
@@ -609,13 +596,11 @@ async function handleExcelUpload(input) {
             let username = row[0] ? String(row[0]).trim() : "";
             if (i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
             if (username && !users.some(u => u.username === username)) {
-                let newUser = { id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" };
-                users.push(newUser);
-                await supabase.from('users').upsert(newUser, { onConflict: 'id' });
+                users.push({ id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" });
                 added++;
             }
         }
-        if (added > 0) { renderAll(); showToast(`${added} user(s) added to Supabase!`); }
+        if (added > 0) { await syncUsers(); renderAll(); showToast(`${added} user(s) added!`); }
         else showToast("No valid users found");
         input.value = '';
     };

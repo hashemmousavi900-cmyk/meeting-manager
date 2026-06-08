@@ -3,303 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تست اتصال به Supabase</title>
+    <title>تست Supabase - روش مستقیم API</title>
     <style>
-        body {
-            font-family: 'Tahoma', sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #e0f2fe, #dcfce7);
-        }
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        button {
-            background: linear-gradient(135deg, #059669, #10b981);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(5,150,105,0.3);
-        }
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-sizing: border-box;
-        }
-        .result {
-            background: #f0fdf4;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-size: 13px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .error {
-            background: #fee2e2;
-            color: #dc2626;
-        }
-        .success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        h3 {
-            color: #065f46;
-            margin-bottom: 15px;
-        }
-        hr {
-            margin: 20px 0;
-            border: none;
-            border-top: 1px solid #e5e7eb;
-        }
-        .status {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin-bottom: 15px;
-        }
-        .status.connected {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        .status.disconnected {
-            background: #fee2e2;
-            color: #dc2626;
-        }
+        body { font-family: Tahoma; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        button { background: #059669; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
+        .result { background: #f0fdf4; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 13px; }
+        .error { background: #fee2e2; color: #dc2626; }
+        .success { background: #d1fae5; color: #065f46; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📡 تست اتصال به Supabase</h2>
-    <div id="connectionStatus" class="status">در حال بررسی اتصال...</div>
+    <h2>📡 تست مستقیم API Supabase</h2>
+    <p>این روش بدون نیاز به کتابخانه و با استفاده از fetch کار می‌کند.</p>
+    <div id="status"></div>
 </div>
 
 <div class="card">
-    <h3>📖 1. خواندن لیست کاربران</h3>
-    <button onclick="testReadUsers()">خواندن کاربران</button>
+    <h3>📖 خواندن کاربران</h3>
+    <button onclick="readUsers()">خواندن کاربران</button>
     <div id="readResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
 <div class="card">
-    <h3>✏️ 2. نوشتن کاربر جدید</h3>
-    <input type="text" id="newUserName" placeholder="نام کاربر (مثال: احمد)" style="width: 100%;">
-    <input type="text" id="newUserEmail" placeholder="ایمیل (اختیاری)" style="width: 100%;">
-    <button onclick="testWriteUser()">افزودن کاربر به Supabase</button>
+    <h3>✏️ افزودن کاربر</h3>
+    <input type="text" id="userName" placeholder="نام کاربر">
+    <button onclick="addUser()">افزودن کاربر</button>
     <div id="writeResult" class="result">برای تست کلیک کنید...</div>
 </div>
 
-<div class="card">
-    <h3>🗑️ 3. حذف آخرین کاربر</h3>
-    <button onclick="testDeleteLastUser()">حذف آخرین کاربر</button>
-    <div id="deleteResult" class="result">برای تست کلیک کنید...</div>
-</div>
-
 <script>
-// ========== تنظیمات Supabase ==========
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-let supabaseClient = null;
-
-// نمایش پیام در یک المان
-function showResult(elementId, message, isError = false) {
-    const element = document.getElementById(elementId);
-    element.innerHTML = message;
-    element.className = `result ${isError ? 'error' : 'success'}`;
-}
-
-// به‌روزرسانی وضعیت اتصال
-function updateConnectionStatus(connected, message = '') {
-    const statusDiv = document.getElementById('connectionStatus');
-    if (connected) {
-        statusDiv.className = 'status connected';
-        statusDiv.innerHTML = `✅ متصل به Supabase ${message ? `- ${message}` : ''}`;
-    } else {
-        statusDiv.className = 'status disconnected';
-        statusDiv.innerHTML = `❌ عدم اتصال به Supabase - ${message}`;
-    }
-}
-
-// تست اتصال به Supabase
-async function testConnection() {
-    try {
-        showResult('readResult', 'در حال بررسی اتصال...', false);
-        
-        // ابتدا بررسی می‌کنیم که کتابخانه بارگذاری شده باشد
-        if (typeof supabaseJs === 'undefined') {
-            updateConnectionStatus(false, 'کتابخانه Supabase بارگذاری نشد');
-            showResult('readResult', '❌ کتابخانه Supabase بارگذاری نشد! لطفاً اینترنت خود را بررسی کنید.', true);
-            return false;
-        }
-        
-        // ایجاد کلاینت
-        supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // تست با یک کوئری ساده
-        const { data, error } = await supabaseClient.from('users').select('count', { count: 'exact', head: true });
-        
-        if (error) {
-            updateConnectionStatus(false, error.message);
-            showResult('readResult', `❌ خطا در اتصال: ${error.message}`, true);
-            return false;
-        }
-        
-        updateConnectionStatus(true, 'اتصال برقرار است');
-        showResult('readResult', '✅ اتصال به Supabase موفقیت‌آمیز بود! حالا می‌توانید تست‌های دیگر را انجام دهید.', false);
-        return true;
-        
-    } catch(e) {
-        updateConnectionStatus(false, e.message);
-        showResult('readResult', `❌ خطا: ${e.message}`, true);
-        return false;
-    }
-}
-
-// تست خواندن کاربران
-async function testReadUsers() {
-    showResult('readResult', 'در حال خواندن داده‌ها...', false);
-    
-    if (!supabaseClient) {
-        const connected = await testConnection();
-        if (!connected) return;
-    }
+async function readUsers() {
+    const resultDiv = document.getElementById('readResult');
+    resultDiv.innerHTML = 'در حال خواندن...';
+    resultDiv.className = 'result';
     
     try {
-        const { data, error } = await supabaseClient.from('users').select('*');
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*`, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
         
-        if (error) {
-            showResult('readResult', `❌ خطا در خواندن: ${error.message}`, true);
-            return;
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        if (data && data.length > 0) {
-            let html = '<strong>✅ لیست کاربران در Supabase:</strong><br><br>';
-            html += '<ul style="margin: 0; padding-right: 20px;">';
-            data.forEach(user => {
-                html += `<li><strong>${user.username}</strong> (${user.email || 'بدون ایمیل'}) - ID: ${user.id}</li>`;
-            });
-            html += '</ul>';
-            html += `<br><strong>تعداد کل:</strong> ${data.length} کاربر`;
-            showResult('readResult', html, false);
+        const data = await response.json();
+        
+        if (data.length === 0) {
+            resultDiv.innerHTML = '📭 هیچ کاربری یافت نشد. ابتدا یک کاربر اضافه کنید.';
+            resultDiv.className = 'result';
         } else {
-            showResult('readResult', '📭 هیچ کاربری در Supabase یافت نشد. ابتدا یک کاربر اضافه کنید.', false);
+            let html = '<strong>✅ لیست کاربران:</strong><br><br>';
+            data.forEach(user => {
+                html += `• ${user.username} (ID: ${user.id})<br>`;
+            });
+            html += `<br><strong>تعداد کل:</strong> ${data.length} کاربر`;
+            resultDiv.innerHTML = html;
+            resultDiv.className = 'result success';
         }
         
-    } catch(e) {
-        showResult('readResult', `❌ خطا: ${e.message}`, true);
+    } catch(error) {
+        resultDiv.innerHTML = `❌ خطا: ${error.message}`;
+        resultDiv.className = 'result error';
     }
 }
 
-// تست نوشتن کاربر جدید
-async function testWriteUser() {
-    const username = document.getElementById('newUserName').value.trim();
-    const email = document.getElementById('newUserEmail').value.trim();
+async function addUser() {
+    const username = document.getElementById('userName').value.trim();
+    const resultDiv = document.getElementById('writeResult');
     
     if (!username) {
-        showResult('writeResult', '❌ لطفا نام کاربر را وارد کنید!', true);
+        resultDiv.innerHTML = '❌ لطفا نام کاربر را وارد کنید!';
+        resultDiv.className = 'result error';
         return;
     }
     
-    showResult('writeResult', 'در حال افزودن کاربر...', false);
-    
-    if (!supabaseClient) {
-        const connected = await testConnection();
-        if (!connected) return;
-    }
+    resultDiv.innerHTML = 'در حال افزودن...';
+    resultDiv.className = 'result';
     
     try {
         const newUser = {
             id: Date.now(),
             username: username,
-            email: email || ''
+            email: ''
         };
         
-        const { data, error } = await supabaseClient.from('users').insert([newUser]);
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(newUser)
+        });
         
-        if (error) {
-            showResult('writeResult', `❌ خطا در نوشتن: ${error.message}`, true);
-            return;
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
         
-        showResult('writeResult', `✅ کاربر "${username}" با موفقیت به Supabase اضافه شد!\n\nاطلاعات ذخیره شده: ${JSON.stringify(newUser, null, 2)}`, false);
+        resultDiv.innerHTML = `✅ کاربر "${username}" با موفقیت به Supabase اضافه شد!`;
+        resultDiv.className = 'result success';
+        document.getElementById('userName').value = '';
         
-        // پاک کردن فیلدها
-        document.getElementById('newUserName').value = '';
-        document.getElementById('newUserEmail').value = '';
+        // به‌روزرسانی لیست
+        setTimeout(() => readUsers(), 500);
         
-        // به‌روزرسانی خواندن
-        setTimeout(() => testReadUsers(), 500);
-        
-    } catch(e) {
-        showResult('writeResult', `❌ خطا: ${e.message}`, true);
+    } catch(error) {
+        resultDiv.innerHTML = `❌ خطا: ${error.message}`;
+        resultDiv.className = 'result error';
     }
 }
 
-// تست حذف آخرین کاربر
-async function testDeleteLastUser() {
-    showResult('deleteResult', 'در حال حذف کاربر...', false);
-    
-    if (!supabaseClient) {
-        const connected = await testConnection();
-        if (!connected) return;
-    }
-    
-    try {
-        // ابتدا آخرین کاربر را پیدا می‌کنیم
-        const { data, error } = await supabaseClient.from('users').select('*').order('id', { ascending: false }).limit(1);
-        
-        if (error) {
-            showResult('deleteResult', `❌ خطا در پیدا کردن کاربر: ${error.message}`, true);
-            return;
-        }
-        
-        if (!data || data.length === 0) {
-            showResult('deleteResult', '📭 هیچ کاربری برای حذف وجود ندارد!', true);
-            return;
-        }
-        
-        const userToDelete = data[0];
-        
-        // حذف کاربر
-        const { error: deleteError } = await supabaseClient.from('users').delete().eq('id', userToDelete.id);
-        
-        if (deleteError) {
-            showResult('deleteResult', `❌ خطا در حذف: ${deleteError.message}`, true);
-            return;
-        }
-        
-        showResult('deleteResult', `✅ کاربر "${userToDelete.username}" با موفقیت از Supabase حذف شد!`, false);
-        
-        // به‌روزرسانی خواندن
-        setTimeout(() => testReadUsers(), 500);
-        
-    } catch(e) {
-        showResult('deleteResult', `❌ خطا: ${e.message}`, true);
-    }
-}
-
-// اجرای تست اتصال در هنگام بارگذاری صفحه
-window.addEventListener('DOMContentLoaded', () => {
-    testConnection();
-});
+// تست اولیه
+readUsers();
 </script>
-
 </body>
 </html>

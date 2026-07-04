@@ -999,7 +999,7 @@ async function saveNewUser() {
     if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
     if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
     
-    let newUser = { username: username, email: "" };
+    let newUser = { id: Date.now(), username: username, email: "" };
     
     const success = await saveToSupabase('users', newUser);
     if (success) {
@@ -1046,8 +1046,9 @@ async function addMeeting() {
     let user = users.find(u => u.id == userId);
     if(!user) return;
     
-    // استفاده از نام ستون‌های صحیح Supabase (snake_case)
+    // استفاده از نام ستون‌های صحیح Supabase (snake_case) + ارسال id
     let newMeeting = { 
+        id: Date.now(),
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -1082,10 +1083,10 @@ async function addTaskOrReminder() {
     let newItem;
     if(type === "task") {
         let priority = document.getElementById("taskPriority").value;
-        newItem = { type: "task", title: title, date: date, time: time, priority: priority, completed: false };
+        newItem = { id: Date.now(), type: "task", title: title, date: date, time: time, priority: priority, completed: false };
     } else {
         let description = document.getElementById("reminderDesc").value.trim() || "No description";
-        newItem = { type: "reminder", title: title, date: date, time: time, description: description, completed: false };
+        newItem = { id: Date.now(), type: "reminder", title: title, date: date, time: time, description: description, completed: false };
     }
     
     const success = await saveToSupabase('tasks', newItem);
@@ -1174,8 +1175,9 @@ async function saveScheduledMeeting(userId) {
     let user = users.find(u => u.id === userId);
     if(!user) return;
     
-    // استفاده از نام ستون‌های صحیح Supabase (snake_case)
+    // استفاده از نام ستون‌های صحیح Supabase (snake_case) + ارسال id
     let newMeeting = { 
+        id: Date.now(),
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -1337,8 +1339,9 @@ async function saveGroupMeeting() {
         let userId = parseInt(cb.value);
         let user = users.find(u => u.id === userId);
         if(user) {
-            // استفاده از نام ستون‌های صحیح Supabase (snake_case)
+            // استفاده از نام ستون‌های صحیح Supabase (snake_case) + ارسال id
             let newMeeting = { 
+                id: Date.now() + Math.random(),
                 user_id: userId, 
                 user_name: user.username, 
                 date: date, 
@@ -1386,7 +1389,7 @@ async function handleExcelUpload(input) {
             let username = row[0] ? String(row[0]).trim() : "";
             if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
             if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
-                let newUser = { username: username, email: row[1] ? String(row[1]).trim() : "" };
+                let newUser = { id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" };
                 const success = await saveToSupabase('users', newUser);
                 if (success) {
                     added++;

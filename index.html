@@ -620,13 +620,6 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.remove(), 2500);
 }
 
-function debounceRender() {
-    if(renderTimeout) clearTimeout(renderTimeout);
-    renderTimeout = setTimeout(() => {
-        renderAll();
-    }, 50);
-}
-
 function getPhotoUrl(username) {
     if(!username) return null;
     let fileName = username.replace(/\s/g, '').toLowerCase();
@@ -647,36 +640,43 @@ function escapeHtml(str) {
 const apiHeaders = {
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
+    'Content-Type': 'application/json'
 };
 
-// ========== توابع Supabase ==========
-async function upsertToSupabase(tableName, data) {
+// ========== توابع Supabase با نمایش خطای دقیق ==========
+async function saveToSupabase(tableName, data) {
     try {
+        console.log(`📤 Saving to ${tableName}:`, data);
+        
         const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}`, {
             method: 'POST',
             headers: {
                 ...apiHeaders,
-                'Prefer': 'resolution=merge-duplicates,return=representation'
+                'Prefer': 'return=minimal'
             },
             body: JSON.stringify(data)
         });
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Supabase upsert error for ${tableName}:`, response.status, errorText);
+            console.error(`❌ Error saving to ${tableName}:`, response.status, errorText);
+            showToast(`Database error: ${response.status}`, "error");
             return false;
         }
+        
+        console.log(`✅ Successfully saved to ${tableName}`);
         return true;
     } catch(e) {
-        console.error(`Supabase upsert exception for ${tableName}:`, e);
+        console.error(`❌ Exception saving to ${tableName}:`, e);
+        showToast(`Network error: ${e.message}`, "error");
         return false;
     }
 }
 
 async function deleteFromSupabase(tableName, id) {
     try {
+        console.log(`🗑️ Deleting from ${tableName}, id:`, id);
+        
         const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?id=eq.${id}`, {
             method: 'DELETE',
             headers: apiHeaders
@@ -684,12 +684,14 @@ async function deleteFromSupabase(tableName, id) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Supabase delete error for ${tableName}:`, response.status, errorText);
+            console.error(`❌ Error deleting from ${tableName}:`, response.status, errorText);
             return false;
         }
+        
+        console.log(`✅ Successfully deleted from ${tableName}`);
         return true;
     } catch(e) {
-        console.error(`Supabase delete exception for ${tableName}:`, e);
+        console.error(`❌ Exception deleting from ${tableName}:`, e);
         return false;
     }
 }
@@ -706,6 +708,7 @@ async function loadUsers() {
             const data = await response.json();
             if (data && data.length > 0) {
                 users = data;
+                console.log(`✅ Loaded ${users.length} users from Supabase`);
                 return;
             }
         }
@@ -738,6 +741,7 @@ async function loadMeetings() {
             const data = await response.json();
             if (data) {
                 meetings = data;
+                console.log(`✅ Loaded ${meetings.length} meetings from Supabase`);
                 return;
             }
         }
@@ -764,6 +768,7 @@ async function loadTasks() {
             const data = await response.json();
             if (data) {
                 tasks = data;
+                console.log(`✅ Loaded ${tasks.length} tasks from Supabase`);
                 return;
             }
         }
@@ -990,11 +995,11 @@ async function saveNewUser() {
     if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
     if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
     
-    let newUser = { id: Date.now(), username: username, email: "" };
+    let newUser = { username: username, email: "" };
     
-    const success = await upsertToSupabase('users', newUser);
+    const success = await saveToSupabase('users', newUser);
     if (success) {
-        users.push(newUser);
+        await loadUsers();
         saveUsersToStorage();
         closeAddUserModal();
         renderAll();
@@ -1006,15 +1011,15 @@ async function saveNewUser() {
 
 async function deleteUser(userId) {
     if(confirm("Are you sure you want to delete this user and all their meetings?")) {
-        const userDeleted = await deleteFromSupabase('users', userId);
-        
         const userMeetings = meetings.filter(m => m.userId === userId);
         for(let m of userMeetings) {
             await deleteFromSupabase('meetings', m.id);
         }
         
-        users = users.filter(u => u.id !== userId);
-        meetings = meetings.filter(m => m.userId !== userId);
+        await deleteFromSupabase('users', userId);
+        
+        await loadUsers();
+        await loadMeetings();
         
         saveUsersToStorage();
         saveMeetingsToStorage();
@@ -1037,11 +1042,19 @@ async function addMeeting() {
     let user = users.find(u => u.id == userId);
     if(!user) return;
     
-    let newMeeting = { id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom };
+    let newMeeting = { 
+        userid: parseInt(userId), 
+        username: user.username, 
+        date: date, 
+        time: timeFormatted, 
+        duration: parseInt(duration), 
+        type: type, 
+        mom: mom 
+    };
     
-    const success = await upsertToSupabase('meetings', newMeeting);
+    const success = await saveToSupabase('meetings', newMeeting);
     if (success) {
-        meetings.push(newMeeting);
+        await loadMeetings();
         saveMeetingsToStorage();
         
         document.getElementById("meetingDateTime").value = "";
@@ -1064,15 +1077,15 @@ async function addTaskOrReminder() {
     let newItem;
     if(type === "task") {
         let priority = document.getElementById("taskPriority").value;
-        newItem = { id: Date.now(), type: "task", title, date, time, priority, completed: false };
+        newItem = { type: "task", title: title, date: date, time: time, priority: priority, completed: false };
     } else {
         let description = document.getElementById("reminderDesc").value.trim() || "No description";
-        newItem = { id: Date.now(), type: "reminder", title, date, time, description, completed: false };
+        newItem = { type: "reminder", title: title, date: date, time: time, description: description, completed: false };
     }
     
-    const success = await upsertToSupabase('tasks', newItem);
+    const success = await saveToSupabase('tasks', newItem);
     if (success) {
-        tasks.push(newItem);
+        await loadTasks();
         saveTasksToStorage();
         renderTasksAndReminders();
         
@@ -1089,7 +1102,7 @@ async function addTaskOrReminder() {
 async function deleteTask(id) {
     if(confirm("Delete?")) {
         await deleteFromSupabase('tasks', id);
-        tasks = tasks.filter(t => t.id !== id);
+        await loadTasks();
         saveTasksToStorage();
         renderTasksAndReminders();
         showToast("Deleted");
@@ -1100,8 +1113,9 @@ async function markTaskComplete(id) {
     let item = tasks.find(t => t.id === id);
     if(item) {
         item.completed = true;
-        const success = await upsertToSupabase('tasks', item);
+        const success = await saveToSupabase('tasks', item);
         if (success) {
+            await loadTasks();
             saveTasksToStorage();
             renderTasksAndReminders();
             showToast(`"${item.title}" completed`);
@@ -1155,11 +1169,19 @@ async function saveScheduledMeeting(userId) {
     let user = users.find(u => u.id === userId);
     if(!user) return;
     
-    let newMeeting = { id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom };
+    let newMeeting = { 
+        userid: parseInt(userId), 
+        username: user.username, 
+        date: date, 
+        time: timeFormatted, 
+        duration: parseInt(duration), 
+        type: type, 
+        mom: mom 
+    };
     
-    const success = await upsertToSupabase('meetings', newMeeting);
+    const success = await saveToSupabase('meetings', newMeeting);
     if (success) {
-        meetings.push(newMeeting);
+        await loadMeetings();
         saveMeetingsToStorage();
         closeScheduleModal();
         renderAll();
@@ -1195,16 +1217,16 @@ async function saveEditedUser() {
     let newUsername = document.getElementById("editUsername").value.trim();
     let newEmail = document.getElementById("editEmail").value.trim();
     if(!newUsername) { showToast("Username required!", "error"); return; }
-    let userIndex = users.findIndex(u => u.id === currentEditUserId);
-    if(userIndex !== -1) {
-        users[userIndex].username = newUsername;
-        users[userIndex].email = newEmail;
+    
+    let user = users.find(u => u.id === currentEditUserId);
+    if(user) {
+        user.username = newUsername;
+        user.email = newEmail;
         
-        const success = await upsertToSupabase('users', users[userIndex]);
+        const success = await saveToSupabase('users', user);
         if (success) {
-            meetings.forEach(m => { if(m.userId === currentEditUserId) m.userName = newUsername; });
-            await upsertToSupabase('meetings', meetings.filter(m => m.userId === currentEditUserId));
-            
+            await loadUsers();
+            await loadMeetings();
             saveUsersToStorage();
             saveMeetingsToStorage();
             renderAll();
@@ -1248,7 +1270,7 @@ function showUserDetails(userId) {
 async function deleteMeeting(meetingId) {
     if(confirm("Delete this meeting?")) {
         await deleteFromSupabase('meetings', meetingId);
-        meetings = meetings.filter(m => m.id !== meetingId);
+        await loadMeetings();
         saveMeetingsToStorage();
         closeModal();
         renderAll();
@@ -1309,16 +1331,24 @@ async function saveGroupMeeting() {
         let userId = parseInt(cb.value);
         let user = users.find(u => u.id === userId);
         if(user) {
-            let newMeeting = { id: Date.now() + Math.random(), userId: user.id, userName: user.username, date: date, time: timeFormatted, duration: durationNum, type: type, mom: mom };
-            const success = await upsertToSupabase('meetings', newMeeting);
+            let newMeeting = { 
+                userid: userId, 
+                username: user.username, 
+                date: date, 
+                time: timeFormatted, 
+                duration: durationNum, 
+                type: type, 
+                mom: mom 
+            };
+            const success = await saveToSupabase('meetings', newMeeting);
             if (success) {
-                meetings.push(newMeeting);
                 addedCount++;
             }
         }
     }
     
     if (addedCount > 0) {
+        await loadMeetings();
         saveMeetingsToStorage();
         closeGroupMeetingModal();
         renderAll();
@@ -1349,16 +1379,16 @@ async function handleExcelUpload(input) {
             let username = row[0] ? String(row[0]).trim() : "";
             if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
             if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
-                let newUser = { id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" };
-                const success = await upsertToSupabase('users', newUser);
+                let newUser = { username: username, email: row[1] ? String(row[1]).trim() : "" };
+                const success = await saveToSupabase('users', newUser);
                 if (success) {
-                    users.push(newUser);
                     added++;
                 }
             }
         }
         
         if(added > 0) { 
+            await loadUsers();
             saveUsersToStorage();
             renderAll(); 
             showToast(`${added} user(s) added to database!`); 
@@ -1397,7 +1427,7 @@ function updateDashboardAndCharts() {
     if(ctx1) { if(chart1) chart1.destroy(); chart1 = new Chart(ctx1, { type: "bar", data: { labels: labels, datasets: [{ label: "Meetings", data: data, backgroundColor: colors, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: true } }); }
     if(ctx2) { if(chart2) chart2.destroy(); chart2 = new Chart(ctx2, { type: "pie", data: { labels: labels, datasets: [{ data: data, backgroundColor: colors }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } }); }
     
-    let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1 flex gap-1 text-[11px]"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1"></i><span>${m.date} ${m.time} - ${m.userName}: ${m.type}</span></div>`).join('');
+    let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1 flex gap-1 text-[11px]"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1"></i><span>${m.date} ${m.time} - ${m.username || m.userName}: ${m.type}</span></div>`).join('');
     document.getElementById("recentLogs") && (document.getElementById("recentLogs").innerHTML = recentHtml || "<div class='text-gray-400 text-xs'>No recent meetings</div>");
 }
 
@@ -1421,7 +1451,7 @@ function downloadFile(content, filename) {
 }
 
 function exportMeetingsReport() {
-    let report = meetings.map(m => ({ User: m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
+    let report = meetings.map(m => ({ User: m.username || m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
     downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Meetings exported");
 }
@@ -1460,23 +1490,23 @@ function importJSON(input) {
         try {
             let imported = JSON.parse(e.target.result);
             if(imported.users) {
-                users = imported.users;
-                for(let u of users) {
-                    await upsertToSupabase('users', u);
+                for(let u of imported.users) {
+                    await saveToSupabase('users', u);
                 }
             }
             if(imported.meetings) {
-                meetings = imported.meetings;
-                for(let m of meetings) {
-                    await upsertToSupabase('meetings', m);
+                for(let m of imported.meetings) {
+                    await saveToSupabase('meetings', m);
                 }
             }
             if(imported.tasks) {
-                tasks = imported.tasks;
-                for(let t of tasks) {
-                    await upsertToSupabase('tasks', t);
+                for(let t of imported.tasks) {
+                    await saveToSupabase('tasks', t);
                 }
             }
+            await loadUsers();
+            await loadMeetings();
+            await loadTasks();
             saveUsersToStorage();
             saveMeetingsToStorage();
             saveTasksToStorage();

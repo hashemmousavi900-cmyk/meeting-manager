@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <!-- حذف اسکریپت اضافی supabase از اینجا -->
     <style>
         * { font-family: 'Poppins', sans-serif; }
         
@@ -603,28 +602,10 @@
 </div>
 
 <script>
-// بارگذاری پویای کتابخانه Supabase
-(function loadSupabase() {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    script.onload = function() {
-        console.log('✅ Supabase library loaded');
-        if (typeof supabaseJs !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('supabaseLoaded'));
-        }
-    };
-    script.onerror = function() {
-        console.error('❌ Failed to load Supabase library');
-        window.dispatchEvent(new CustomEvent('supabaseFailed'));
-    };
-    document.head.appendChild(script);
-})();
-
 // ========== تنظیمات Supabase ==========
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
-let supabaseClient = null;
 let users = [], meetings = [], tasks = [];
 let chart1 = null, chart2 = null;
 let renderTimeout = null;
@@ -646,7 +627,6 @@ function debounceRender() {
     }, 50);
 }
 
-// تابع صحیح برای دریافت آدرس عکس از Supabase Storage (با در نظر گرفتن پوشه User-photos)
 function getPhotoUrl(username) {
     if(!username) return null;
     let fileName = username.replace(/\s/g, '').toLowerCase();
@@ -667,10 +647,54 @@ function escapeHtml(str) {
 const apiHeaders = {
     'apikey': SUPABASE_ANON_KEY,
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
 };
 
-// ========== بارگذاری از Supabase با استفاده از fetch API ==========
+// ========== توابع Supabase ==========
+async function upsertToSupabase(tableName, data) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}`, {
+            method: 'POST',
+            headers: {
+                ...apiHeaders,
+                'Prefer': 'resolution=merge-duplicates,return=representation'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Supabase upsert error for ${tableName}:`, response.status, errorText);
+            return false;
+        }
+        return true;
+    } catch(e) {
+        console.error(`Supabase upsert exception for ${tableName}:`, e);
+        return false;
+    }
+}
+
+async function deleteFromSupabase(tableName, id) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?id=eq.${id}`, {
+            method: 'DELETE',
+            headers: apiHeaders
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Supabase delete error for ${tableName}:`, response.status, errorText);
+            return false;
+        }
+        return true;
+    } catch(e) {
+        console.error(`Supabase delete exception for ${tableName}:`, e);
+        return false;
+    }
+}
+
+// ========== بارگذاری از Supabase ==========
 async function loadUsers() {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&order=id.desc`, {
@@ -682,7 +706,6 @@ async function loadUsers() {
             const data = await response.json();
             if (data && data.length > 0) {
                 users = data;
-                renderAll();
                 return;
             }
         }
@@ -690,7 +713,6 @@ async function loadUsers() {
         console.warn('Supabase fetch error:', e);
     }
     
-    // Fallback: load from localStorage
     let stored = localStorage.getItem('mm_users');
     if (stored) {
         users = JSON.parse(stored);
@@ -703,7 +725,6 @@ async function loadUsers() {
         ];
         saveUsersToStorage();
     }
-    renderAll();
 }
 
 async function loadMeetings() {
@@ -717,7 +738,6 @@ async function loadMeetings() {
             const data = await response.json();
             if (data) {
                 meetings = data;
-                renderAll();
                 return;
             }
         }
@@ -731,7 +751,6 @@ async function loadMeetings() {
     } else {
         meetings = [];
     }
-    renderAll();
 }
 
 async function loadTasks() {
@@ -745,7 +764,6 @@ async function loadTasks() {
             const data = await response.json();
             if (data) {
                 tasks = data;
-                renderTasksAndReminders();
                 return;
             }
         }
@@ -765,55 +783,12 @@ async function loadTasks() {
         ];
         saveTasksToStorage();
     }
-    renderTasksAndReminders();
 }
 
-// ========== ذخیره در localStorage به عنوان fallback ==========
+// ========== ذخیره در localStorage ==========
 function saveUsersToStorage() { localStorage.setItem('mm_users', JSON.stringify(users)); }
 function saveMeetingsToStorage() { localStorage.setItem('mm_meetings', JSON.stringify(meetings)); }
 function saveTasksToStorage() { localStorage.setItem('mm_tasks', JSON.stringify(tasks)); }
-
-async function syncUsers() {
-    saveUsersToStorage();
-    try {
-        for(let u of users) {
-            await fetch(`${SUPABASE_URL}/rest/v1/users`, {
-                method: 'POST',
-                headers: apiHeaders,
-                body: JSON.stringify(u)
-            });
-        }
-        console.log('Users synced to Supabase');
-    } catch(e) { console.warn('Supabase sync error:', e); }
-}
-
-async function syncMeetings() {
-    saveMeetingsToStorage();
-    try {
-        for(let m of meetings) {
-            await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
-                method: 'POST',
-                headers: apiHeaders,
-                body: JSON.stringify(m)
-            });
-        }
-        console.log('Meetings synced to Supabase');
-    } catch(e) { console.warn('Supabase sync error:', e); }
-}
-
-async function syncTasks() {
-    saveTasksToStorage();
-    try {
-        for(let t of tasks) {
-            await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
-                method: 'POST',
-                headers: apiHeaders,
-                body: JSON.stringify(t)
-            });
-        }
-        console.log('Tasks synced to Supabase');
-    } catch(e) { console.warn('Supabase sync error:', e); }
-}
 
 // ========== منوها ==========
 function switchTab(tabId) {
@@ -1016,19 +991,34 @@ async function saveNewUser() {
     if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
     
     let newUser = { id: Date.now(), username: username, email: "" };
-    users.push(newUser);
-    await syncUsers();
-    closeAddUserModal();
-    renderAll();
-    showToast(`User "${username}" added`);
+    
+    const success = await upsertToSupabase('users', newUser);
+    if (success) {
+        users.push(newUser);
+        saveUsersToStorage();
+        closeAddUserModal();
+        renderAll();
+        showToast(`User "${username}" added`);
+    } else {
+        showToast("Failed to save user to database", "error");
+    }
 }
 
 async function deleteUser(userId) {
     if(confirm("Are you sure you want to delete this user and all their meetings?")) {
+        const userDeleted = await deleteFromSupabase('users', userId);
+        
+        const userMeetings = meetings.filter(m => m.userId === userId);
+        for(let m of userMeetings) {
+            await deleteFromSupabase('meetings', m.id);
+        }
+        
         users = users.filter(u => u.id !== userId);
         meetings = meetings.filter(m => m.userId !== userId);
-        await syncUsers();
-        await syncMeetings();
+        
+        saveUsersToStorage();
+        saveMeetingsToStorage();
+        
         renderAll();
         showToast("User deleted");
     }
@@ -1048,14 +1038,20 @@ async function addMeeting() {
     if(!user) return;
     
     let newMeeting = { id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom };
-    meetings.push(newMeeting);
-    await syncMeetings();
     
-    document.getElementById("meetingDateTime").value = "";
-    document.getElementById("meetingDuration").value = "";
-    document.getElementById("meetingMom").value = "";
-    renderAll();
-    showToast(`Meeting scheduled for ${user.username}`);
+    const success = await upsertToSupabase('meetings', newMeeting);
+    if (success) {
+        meetings.push(newMeeting);
+        saveMeetingsToStorage();
+        
+        document.getElementById("meetingDateTime").value = "";
+        document.getElementById("meetingDuration").value = "";
+        document.getElementById("meetingMom").value = "";
+        renderAll();
+        showToast(`Meeting scheduled for ${user.username}`);
+    } else {
+        showToast("Failed to save meeting to database", "error");
+    }
 }
 
 async function addTaskOrReminder() {
@@ -1064,27 +1060,37 @@ async function addTaskOrReminder() {
     let date = document.getElementById("itemDate").value;
     let time = document.getElementById("itemTime").value;
     if(!title || !date || !time) { showToast("Fill all fields!", "error"); return; }
+    
+    let newItem;
     if(type === "task") {
         let priority = document.getElementById("taskPriority").value;
-        tasks.push({ id: Date.now(), type: "task", title, date, time, priority, completed: false });
+        newItem = { id: Date.now(), type: "task", title, date, time, priority, completed: false };
     } else {
         let description = document.getElementById("reminderDesc").value.trim() || "No description";
-        tasks.push({ id: Date.now(), type: "reminder", title, date, time, description, completed: false });
+        newItem = { id: Date.now(), type: "reminder", title, date, time, description, completed: false };
     }
-    await syncTasks();
-    renderTasksAndReminders();
     
-    document.getElementById("itemTitle").value = "";
-    document.getElementById("itemDate").value = "";
-    document.getElementById("itemTime").value = "";
-    document.getElementById("reminderDesc").value = "";
-    showToast(`${type === "task" ? "Task" : "Reminder"} added`);
+    const success = await upsertToSupabase('tasks', newItem);
+    if (success) {
+        tasks.push(newItem);
+        saveTasksToStorage();
+        renderTasksAndReminders();
+        
+        document.getElementById("itemTitle").value = "";
+        document.getElementById("itemDate").value = "";
+        document.getElementById("itemTime").value = "";
+        document.getElementById("reminderDesc").value = "";
+        showToast(`${type === "task" ? "Task" : "Reminder"} added`);
+    } else {
+        showToast("Failed to save to database", "error");
+    }
 }
 
 async function deleteTask(id) {
     if(confirm("Delete?")) {
+        await deleteFromSupabase('tasks', id);
         tasks = tasks.filter(t => t.id !== id);
-        await syncTasks();
+        saveTasksToStorage();
         renderTasksAndReminders();
         showToast("Deleted");
     }
@@ -1094,9 +1100,15 @@ async function markTaskComplete(id) {
     let item = tasks.find(t => t.id === id);
     if(item) {
         item.completed = true;
-        await syncTasks();
-        renderTasksAndReminders();
-        showToast(`"${item.title}" completed`);
+        const success = await upsertToSupabase('tasks', item);
+        if (success) {
+            saveTasksToStorage();
+            renderTasksAndReminders();
+            showToast(`"${item.title}" completed`);
+        } else {
+            item.completed = false;
+            showToast("Failed to update task", "error");
+        }
     }
 }
 
@@ -1143,11 +1155,18 @@ async function saveScheduledMeeting(userId) {
     let user = users.find(u => u.id === userId);
     if(!user) return;
     
-    meetings.push({ id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom });
-    await syncMeetings();
-    closeScheduleModal();
-    renderAll();
-    showToast(`Meeting scheduled for ${user.username}`);
+    let newMeeting = { id: Date.now(), userId: user.id, userName: user.username, date, time: timeFormatted, duration: parseInt(duration), type, mom };
+    
+    const success = await upsertToSupabase('meetings', newMeeting);
+    if (success) {
+        meetings.push(newMeeting);
+        saveMeetingsToStorage();
+        closeScheduleModal();
+        renderAll();
+        showToast(`Meeting scheduled for ${user.username}`);
+    } else {
+        showToast("Failed to save meeting", "error");
+    }
 }
 
 function closeScheduleModal() { document.getElementById("scheduleModal").style.display = "none"; }
@@ -1180,13 +1199,21 @@ async function saveEditedUser() {
     if(userIndex !== -1) {
         users[userIndex].username = newUsername;
         users[userIndex].email = newEmail;
-        await syncUsers();
-        meetings.forEach(m => { if(m.userId === currentEditUserId) m.userName = newUsername; });
-        await syncMeetings();
-        renderAll();
-        showToast("User updated");
+        
+        const success = await upsertToSupabase('users', users[userIndex]);
+        if (success) {
+            meetings.forEach(m => { if(m.userId === currentEditUserId) m.userName = newUsername; });
+            await upsertToSupabase('meetings', meetings.filter(m => m.userId === currentEditUserId));
+            
+            saveUsersToStorage();
+            saveMeetingsToStorage();
+            renderAll();
+            showToast("User updated");
+            closeEditUserModal();
+        } else {
+            showToast("Failed to update user", "error");
+        }
     }
-    closeEditUserModal();
 }
 
 function closeEditUserModal() { document.getElementById("editUserModal").style.display = "none"; }
@@ -1220,8 +1247,9 @@ function showUserDetails(userId) {
 
 async function deleteMeeting(meetingId) {
     if(confirm("Delete this meeting?")) {
+        await deleteFromSupabase('meetings', meetingId);
         meetings = meetings.filter(m => m.id !== meetingId);
-        await syncMeetings();
+        saveMeetingsToStorage();
         closeModal();
         renderAll();
         showToast("Meeting deleted");
@@ -1276,18 +1304,28 @@ async function saveGroupMeeting() {
     let timeFormatted = time.substring(0, 5);
     let durationNum = parseInt(duration);
     let addedCount = 0;
+    
     for(let cb of selectedCheckboxes) {
         let userId = parseInt(cb.value);
         let user = users.find(u => u.id === userId);
         if(user) {
-            meetings.push({ id: Date.now() + Math.random(), userId: user.id, userName: user.username, date: date, time: timeFormatted, duration: durationNum, type: type, mom: mom });
-            addedCount++;
+            let newMeeting = { id: Date.now() + Math.random(), userId: user.id, userName: user.username, date: date, time: timeFormatted, duration: durationNum, type: type, mom: mom };
+            const success = await upsertToSupabase('meetings', newMeeting);
+            if (success) {
+                meetings.push(newMeeting);
+                addedCount++;
+            }
         }
     }
-    await syncMeetings();
-    closeGroupMeetingModal();
-    renderAll();
-    showToast(`${type} meeting scheduled for ${addedCount} people`);
+    
+    if (addedCount > 0) {
+        saveMeetingsToStorage();
+        closeGroupMeetingModal();
+        renderAll();
+        showToast(`${type} meeting scheduled for ${addedCount} people`);
+    } else {
+        showToast("Failed to save meetings", "error");
+    }
 }
 
 function closeGroupMeetingModal() { document.getElementById("groupMeetingModal").style.display = "none"; }
@@ -1312,20 +1350,18 @@ async function handleExcelUpload(input) {
             if(i === 0 && (username.toLowerCase() === "username" || username === "")) continue;
             if(username && !users.some(u => u.username.toLowerCase() === username.toLowerCase()) && users.length < 100) {
                 let newUser = { id: Date.now() + Math.random(), username: username, email: row[1] ? String(row[1]).trim() : "" };
-                users.push(newUser);
-                await fetch(`${SUPABASE_URL}/rest/v1/users`, {
-                    method: 'POST',
-                    headers: apiHeaders,
-                    body: JSON.stringify(newUser)
-                });
-                added++;
+                const success = await upsertToSupabase('users', newUser);
+                if (success) {
+                    users.push(newUser);
+                    added++;
+                }
             }
         }
         
         if(added > 0) { 
             saveUsersToStorage();
             renderAll(); 
-            showToast(`${added} user(s) added to Supabase!`); 
+            showToast(`${added} user(s) added to database!`); 
         } else { 
             showToast("No valid users found", "error"); 
         }
@@ -1423,10 +1459,27 @@ function importJSON(input) {
     reader.onload = async function(e) {
         try {
             let imported = JSON.parse(e.target.result);
-            if(imported.users) users = imported.users;
-            if(imported.meetings) meetings = imported.meetings;
-            if(imported.tasks) tasks = imported.tasks;
-            await syncUsers(); await syncMeetings(); await syncTasks();
+            if(imported.users) {
+                users = imported.users;
+                for(let u of users) {
+                    await upsertToSupabase('users', u);
+                }
+            }
+            if(imported.meetings) {
+                meetings = imported.meetings;
+                for(let m of meetings) {
+                    await upsertToSupabase('meetings', m);
+                }
+            }
+            if(imported.tasks) {
+                tasks = imported.tasks;
+                for(let t of tasks) {
+                    await upsertToSupabase('tasks', t);
+                }
+            }
+            saveUsersToStorage();
+            saveMeetingsToStorage();
+            saveTasksToStorage();
             renderAll();
             showToast("Data imported successfully");
         } catch(err) { showToast("Invalid JSON!", "error"); }

@@ -645,6 +645,11 @@ const apiHeaders = {
 // ========== توابع Supabase ==========
 async function saveToSupabase(tableName, data) {
     try {
+        // ✅ اطمینان از وجود id - این خط اصلی مشکل را حل می‌کند
+        if (!data.id) {
+            data.id = Date.now() + Math.random() * 1000;
+        }
+        
         console.log(`📤 Saving to ${tableName}:`, data);
         
         const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}`, {
@@ -739,12 +744,7 @@ async function loadMeetings() {
         if (response.ok) {
             const data = await response.json();
             if (data) {
-                // تبدیل نام ستون‌ها از snake_case به فرمت قابل استفاده
-                meetings = data.map(m => ({
-                    ...m,
-                    userId: m.user_id,
-                    userName: m.user_name
-                }));
+                meetings = data;
                 console.log(`✅ Loaded ${meetings.length} meetings from Supabase`);
                 return;
             }
@@ -1046,9 +1046,9 @@ async function addMeeting() {
     let user = users.find(u => u.id == userId);
     if(!user) return;
     
-    // استفاده از نام ستون‌های صحیح Supabase (snake_case) + ارسال id
+    // ✅ استفاده از نام ستون‌های صحیح Supabase (snake_case)
     let newMeeting = { 
-        id: Date.now(),
+        id: Date.now(),  // ✅ ارسال id
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -1150,7 +1150,8 @@ function openScheduleModal(userId) {
             <div><input type="number" id="scheduleDuration" placeholder="Duration (min)" class="w-full border rounded-lg p-2 text-sm"></div>
             <div><select id="scheduleType" class="w-full border rounded-lg p-2 text-sm">
                 <option value="Individual">👤 Individual</option><option value="Team">👥 Team</option>
-                <option value="Disciplinary">⚖️ Disciplinary</option><option value="CLF">📊 CLF</option>
+                <option value="Disciplinary">⚖️ Disciplinary</option>
+                <option value="CLF">📊 CLF</option>
                 <option value="Project Review">📁 Project Review</option>
                 <option value="Strategic">🎯 Strategic</option>
                 <option value="One on One">🤝 One on One</option>
@@ -1175,9 +1176,9 @@ async function saveScheduledMeeting(userId) {
     let user = users.find(u => u.id === userId);
     if(!user) return;
     
-    // استفاده از نام ستون‌های صحیح Supabase (snake_case) + ارسال id
+    // ✅ استفاده از نام ستون‌های صحیح Supabase (snake_case)
     let newMeeting = { 
-        id: Date.now(),
+        id: Date.now(),  // ✅ ارسال id
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -1339,7 +1340,7 @@ async function saveGroupMeeting() {
         let userId = parseInt(cb.value);
         let user = users.find(u => u.id === userId);
         if(user) {
-            // استفاده از نام ستون‌های صحیح Supabase (snake_case) + ارسال id
+            // ✅ استفاده از نام ستون‌های صحیح Supabase (snake_case)
             let newMeeting = { 
                 id: Date.now() + Math.random(),
                 user_id: userId, 

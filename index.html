@@ -608,7 +608,6 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let users = [], meetings = [], tasks = [];
 let chart1 = null, chart2 = null;
-let renderTimeout = null;
 let currentEditUserId = null;
 
 // ========== توابع کمکی ==========
@@ -643,7 +642,7 @@ const apiHeaders = {
     'Content-Type': 'application/json'
 };
 
-// ========== توابع Supabase با نمایش خطای دقیق ==========
+// ========== توابع Supabase ==========
 async function saveToSupabase(tableName, data) {
     try {
         console.log(`📤 Saving to ${tableName}:`, data);
@@ -740,7 +739,12 @@ async function loadMeetings() {
         if (response.ok) {
             const data = await response.json();
             if (data) {
-                meetings = data;
+                // تبدیل نام ستون‌ها از snake_case به فرمت قابل استفاده
+                meetings = data.map(m => ({
+                    ...m,
+                    userId: m.user_id,
+                    userName: m.user_name
+                }));
                 console.log(`✅ Loaded ${meetings.length} meetings from Supabase`);
                 return;
             }
@@ -1042,9 +1046,10 @@ async function addMeeting() {
     let user = users.find(u => u.id == userId);
     if(!user) return;
     
+    // استفاده از نام ستون‌های صحیح Supabase (snake_case)
     let newMeeting = { 
-        userid: parseInt(userId), 
-        username: user.username, 
+        user_id: parseInt(userId), 
+        user_name: user.username, 
         date: date, 
         time: timeFormatted, 
         duration: parseInt(duration), 
@@ -1169,9 +1174,10 @@ async function saveScheduledMeeting(userId) {
     let user = users.find(u => u.id === userId);
     if(!user) return;
     
+    // استفاده از نام ستون‌های صحیح Supabase (snake_case)
     let newMeeting = { 
-        userid: parseInt(userId), 
-        username: user.username, 
+        user_id: parseInt(userId), 
+        user_name: user.username, 
         date: date, 
         time: timeFormatted, 
         duration: parseInt(duration), 
@@ -1331,9 +1337,10 @@ async function saveGroupMeeting() {
         let userId = parseInt(cb.value);
         let user = users.find(u => u.id === userId);
         if(user) {
+            // استفاده از نام ستون‌های صحیح Supabase (snake_case)
             let newMeeting = { 
-                userid: userId, 
-                username: user.username, 
+                user_id: userId, 
+                user_name: user.username, 
                 date: date, 
                 time: timeFormatted, 
                 duration: durationNum, 
@@ -1427,7 +1434,7 @@ function updateDashboardAndCharts() {
     if(ctx1) { if(chart1) chart1.destroy(); chart1 = new Chart(ctx1, { type: "bar", data: { labels: labels, datasets: [{ label: "Meetings", data: data, backgroundColor: colors, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: true } }); }
     if(ctx2) { if(chart2) chart2.destroy(); chart2 = new Chart(ctx2, { type: "pie", data: { labels: labels, datasets: [{ data: data, backgroundColor: colors }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } }); }
     
-    let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1 flex gap-1 text-[11px]"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1"></i><span>${m.date} ${m.time} - ${m.username || m.userName}: ${m.type}</span></div>`).join('');
+    let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1 flex gap-1 text-[11px]"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1"></i><span>${m.date} ${m.time} - ${m.userName}: ${m.type}</span></div>`).join('');
     document.getElementById("recentLogs") && (document.getElementById("recentLogs").innerHTML = recentHtml || "<div class='text-gray-400 text-xs'>No recent meetings</div>");
 }
 
@@ -1451,7 +1458,7 @@ function downloadFile(content, filename) {
 }
 
 function exportMeetingsReport() {
-    let report = meetings.map(m => ({ User: m.username || m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
+    let report = meetings.map(m => ({ User: m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
     downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Meetings exported");
 }

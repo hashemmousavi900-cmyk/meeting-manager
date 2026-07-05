@@ -293,6 +293,24 @@
         .tab-content.hidden {
             display: none !important;
         }
+
+        /* استایل دکمه ویرایش در مودال */
+        .edit-meeting-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 10px;
+            margin: 0 2px;
+            transition: all 0.2s;
+        }
+        
+        .edit-meeting-btn:hover {
+            background: #d97706;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -575,6 +593,17 @@
     </div>
 </div>
 
+<!-- مودال ویرایش جلسه -->
+<div id="editMeetingModal" class="modal" onclick="closeEditMeetingModalOnOutside(event)">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
+            <h3 class="text-lg font-bold text-gray-800">✏️ Edit Meeting</h3>
+            <button onclick="closeEditMeetingModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
+        </div>
+        <div id="editMeetingModalBody"></div>
+    </div>
+</div>
+
 <div id="addUserModal" class="modal" onclick="closeAddUserModalOnOutside(event)">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
@@ -609,6 +638,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let users = [], meetings = [], tasks = [];
 let chart1 = null, chart2 = null;
 let currentEditUserId = null;
+let currentEditMeetingId = null;
 
 // ========== توابع کمکی ==========
 function showToast(message, type = "success") {
@@ -645,12 +675,10 @@ const apiHeaders = {
 // ========== توابع Supabase ==========
 async function saveToSupabase(tableName, data) {
     try {
-        // ✅ اطمینان از وجود id
         if (!data.id) {
             data.id = Date.now() + Math.random() * 1000;
         }
         
-        // ✅ حذف فیلدهای اضافی که ممکن است باعث خطا شوند
         if (tableName === 'users') {
             delete data.created_at;
             delete data.updated_at;
@@ -671,7 +699,6 @@ async function saveToSupabase(tableName, data) {
             const errorText = await response.text();
             console.error(`❌ Error saving to ${tableName}:`, response.status, errorText);
             
-            // اگر خطای duplicate بود، به کاربر پیام مناسب بده
             if (response.status === 409) {
                 showToast("این کاربر قبلاً در سیستم ثبت شده است! برای ویرایش از دکمه Edit استفاده کنید.", "error");
             } else {
@@ -689,9 +716,37 @@ async function saveToSupabase(tableName, data) {
     }
 }
 
+async function updateMeetingInSupabase(id, data) {
+    try {
+        console.log(`📤 Updating meeting ${id}:`, data);
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/meetings?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: {
+                ...apiHeaders,
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Error updating meeting:`, response.status, errorText);
+            showToast(`Database error: ${response.status}`, "error");
+            return false;
+        }
+        
+        console.log(`✅ Successfully updated meeting ${id}`);
+        return true;
+    } catch(e) {
+        console.error(`❌ Exception updating meeting:`, e);
+        showToast(`Network error: ${e.message}`, "error");
+        return false;
+    }
+}
+
 async function updateUserInSupabase(id, data) {
     try {
-        // ✅ حذف فیلدهای اضافی
         delete data.created_at;
         delete data.updated_at;
         
@@ -766,7 +821,6 @@ async function loadUsers() {
         console.warn('Supabase fetch error:', e);
     }
     
-    // Fallback به localStorage
     let stored = localStorage.getItem('mm_users');
     if (stored) {
         users = JSON.parse(stored);
@@ -792,7 +846,6 @@ async function loadMeetings() {
         if (response.ok) {
             const data = await response.json();
             if (data) {
-                // ✅ تبدیل نام ستون‌ها برای استفاده در کد
                 meetings = data.map(m => ({
                     id: m.id,
                     userId: m.user_id,
@@ -1285,10 +1338,8 @@ async function saveEditedUser() {
         user.username = newUsername;
         user.email = newEmail;
         
-        // ✅ استفاده از تابع update به جای save
         const success = await updateUserInSupabase(user.id, { username: newUsername, email: newEmail });
         if (success) {
-            // به‌روزرسانی نام کاربر در جلسات
             meetings.forEach(m => {
                 if (m.userId === user.id) {
                     m.userName = newUsername;
@@ -1302,7 +1353,6 @@ async function saveEditedUser() {
             showToast("User updated");
             closeEditUserModal();
         } else {
-            // برگرداندن به حالت قبلی در صورت خطا
             user.username = oldUsername;
             showToast("Failed to update user", "error");
         }
@@ -1312,6 +1362,7 @@ async function saveEditedUser() {
 function closeEditUserModal() { document.getElementById("editUserModal").style.display = "none"; }
 function closeEditUserModalOnOutside(event) { if(event.target === document.getElementById("editUserModal")) closeEditUserModal(); }
 
+// ========== نمایش جزییات کاربر با دکمه ویرایش جلسه ==========
 function showUserDetails(userId) {
     let user = users.find(u => u.id === userId);
     let userMeetings = meetings.filter(m => m.userId === userId);
@@ -1325,8 +1376,19 @@ function showUserDetails(userId) {
             meetingsHtml += `
                 <div class="border-b border-gray-100 pb-3 mb-2">
                     <div class="flex justify-between items-start">
-                        <div><div class="font-semibold">${m.date} - ${m.time}</div><div class="text-xs text-gray-500">${m.duration} min</div><div class="text-xs bg-emerald-100 px-2 py-0.5 rounded-full">${m.type}</div></div>
-                        <button onclick="deleteMeeting(${m.id})" class="text-red-400"><i class="fas fa-trash-alt"></i></button>
+                        <div>
+                            <div class="font-semibold">${m.date} - ${m.time}</div>
+                            <div class="text-xs text-gray-500">${m.duration} min</div>
+                            <div class="text-xs bg-emerald-100 px-2 py-0.5 rounded-full">${m.type}</div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="openEditMeetingModal(${m.id})" class="edit-meeting-btn" title="Edit Meeting">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteMeeting(${m.id})" class="text-red-400 text-xs" title="Delete Meeting">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">📝 ${escapeHtml(m.mom.substring(0,100))}${m.mom.length>100?'...':''}</div>
                 </div>
@@ -1336,6 +1398,110 @@ function showUserDetails(userId) {
         document.getElementById("modalBody").innerHTML = meetingsHtml;
     }
     document.getElementById("userModal").style.display = "flex";
+}
+
+// ========== ویرایش جلسه ==========
+function openEditMeetingModal(meetingId) {
+    let meeting = meetings.find(m => m.id === meetingId);
+    if(!meeting) {
+        showToast("Meeting not found!", "error");
+        return;
+    }
+    
+    currentEditMeetingId = meetingId;
+    
+    let html = `
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">User</label>
+                <select id="editMeetingUser" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                    ${users.map(u => `<option value="${u.id}" ${u.id === meeting.userId ? 'selected' : ''}>${escapeHtml(u.username)}</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Date & Time</label>
+                <input type="datetime-local" id="editMeetingDateTime" class="w-full border border-gray-300 rounded-lg p-2 text-sm" value="${meeting.date}T${meeting.time}">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Duration (min)</label>
+                <input type="number" id="editMeetingDuration" class="w-full border border-gray-300 rounded-lg p-2 text-sm" value="${meeting.duration}">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Type</label>
+                <select id="editMeetingType" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                    <option value="Individual" ${meeting.type === 'Individual' ? 'selected' : ''}>👤 Individual</option>
+                    <option value="Team" ${meeting.type === 'Team' ? 'selected' : ''}>👥 Team</option>
+                    <option value="Disciplinary" ${meeting.type === 'Disciplinary' ? 'selected' : ''}>⚖️ Disciplinary</option>
+                    <option value="CLF" ${meeting.type === 'CLF' ? 'selected' : ''}>📊 CLF</option>
+                    <option value="Project Review" ${meeting.type === 'Project Review' ? 'selected' : ''}>📁 Project Review</option>
+                    <option value="Strategic" ${meeting.type === 'Strategic' ? 'selected' : ''}>🎯 Strategic</option>
+                    <option value="One on One" ${meeting.type === 'One on One' ? 'selected' : ''}>🤝 One on One</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">MOM</label>
+                <textarea id="editMeetingMom" rows="2" class="w-full border border-gray-300 rounded-lg p-2 text-sm">${escapeHtml(meeting.mom)}</textarea>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveEditedMeeting()" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg">💾 Save</button>
+                <button onclick="closeEditMeetingModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById("editMeetingModalBody").innerHTML = html;
+    document.getElementById("editMeetingModal").style.display = "flex";
+    closeModal(); // بستن مودال userModal
+}
+
+async function saveEditedMeeting() {
+    let userId = document.getElementById("editMeetingUser").value;
+    let dateTime = document.getElementById("editMeetingDateTime").value;
+    let duration = document.getElementById("editMeetingDuration").value;
+    let type = document.getElementById("editMeetingType").value;
+    let mom = document.getElementById("editMeetingMom").value.trim() || "No MOM";
+    
+    if(!dateTime) { showToast("Please select date & time!", "error"); return; }
+    if(!duration) { showToast("Please enter duration!", "error"); return; }
+    
+    let [date, time] = dateTime.split('T');
+    let timeFormatted = time.substring(0, 5);
+    let user = users.find(u => u.id == userId);
+    
+    if(!user) {
+        showToast("User not found!", "error");
+        return;
+    }
+    
+    let updatedMeeting = {
+        user_id: parseInt(userId),
+        user_name: user.username,
+        date: date,
+        time: timeFormatted,
+        duration: parseInt(duration),
+        type: type,
+        mom: mom
+    };
+    
+    const success = await updateMeetingInSupabase(currentEditMeetingId, updatedMeeting);
+    if (success) {
+        await loadMeetings();
+        saveMeetingsToStorage();
+        closeEditMeetingModal();
+        renderAll();
+        showToast(`Meeting updated successfully!`);
+    }
+}
+
+function closeEditMeetingModal() {
+    document.getElementById("editMeetingModal").style.display = "none";
+    currentEditMeetingId = null;
+}
+
+function closeEditMeetingModalOnOutside(event) {
+    if(event.target === document.getElementById("editMeetingModal")) {
+        closeEditMeetingModal();
+    }
 }
 
 async function deleteMeeting(meetingId) {

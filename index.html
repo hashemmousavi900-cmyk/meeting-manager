@@ -645,9 +645,15 @@ const apiHeaders = {
 // ========== توابع Supabase ==========
 async function saveToSupabase(tableName, data) {
     try {
-        // ✅ اطمینان از وجود id - این خط اصلی مشکل را حل می‌کند
+        // ✅ اطمینان از وجود id
         if (!data.id) {
             data.id = Date.now() + Math.random() * 1000;
+        }
+        
+        // ✅ حذف فیلدهای اضافی که ممکن است باعث خطا شوند
+        if (tableName === 'users') {
+            delete data.created_at;
+            delete data.updated_at;
         }
         
         console.log(`📤 Saving to ${tableName}:`, data);
@@ -664,7 +670,13 @@ async function saveToSupabase(tableName, data) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`❌ Error saving to ${tableName}:`, response.status, errorText);
-            showToast(`Database error: ${response.status}`, "error");
+            
+            // اگر خطای duplicate بود، به کاربر پیام مناسب بده
+            if (response.status === 409) {
+                showToast("این کاربر قبلاً در سیستم ثبت شده است! برای ویرایش از دکمه Edit استفاده کنید.", "error");
+            } else {
+                showToast(`Database error: ${response.status}`, "error");
+            }
             return false;
         }
         
@@ -672,6 +684,39 @@ async function saveToSupabase(tableName, data) {
         return true;
     } catch(e) {
         console.error(`❌ Exception saving to ${tableName}:`, e);
+        showToast(`Network error: ${e.message}`, "error");
+        return false;
+    }
+}
+
+async function updateUserInSupabase(id, data) {
+    try {
+        // ✅ حذف فیلدهای اضافی
+        delete data.created_at;
+        delete data.updated_at;
+        
+        console.log(`📤 Updating user ${id}:`, data);
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: {
+                ...apiHeaders,
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Error updating user:`, response.status, errorText);
+            showToast(`Database error: ${response.status}`, "error");
+            return false;
+        }
+        
+        console.log(`✅ Successfully updated user ${id}`);
+        return true;
+    } catch(e) {
+        console.error(`❌ Exception updating user:`, e);
         showToast(`Network error: ${e.message}`, "error");
         return false;
     }
@@ -713,6 +758,7 @@ async function loadUsers() {
             if (data && data.length > 0) {
                 users = data;
                 console.log(`✅ Loaded ${users.length} users from Supabase`);
+                renderAll();
                 return;
             }
         }
@@ -720,6 +766,7 @@ async function loadUsers() {
         console.warn('Supabase fetch error:', e);
     }
     
+    // Fallback به localStorage
     let stored = localStorage.getItem('mm_users');
     if (stored) {
         users = JSON.parse(stored);
@@ -732,6 +779,7 @@ async function loadUsers() {
         ];
         saveUsersToStorage();
     }
+    renderAll();
 }
 
 async function loadMeetings() {
@@ -744,8 +792,19 @@ async function loadMeetings() {
         if (response.ok) {
             const data = await response.json();
             if (data) {
-                meetings = data;
+                // ✅ تبدیل نام ستون‌ها برای استفاده در کد
+                meetings = data.map(m => ({
+                    id: m.id,
+                    userId: m.user_id,
+                    userName: m.user_name,
+                    date: m.date,
+                    time: m.time,
+                    duration: m.duration,
+                    type: m.type,
+                    mom: m.mom
+                }));
                 console.log(`✅ Loaded ${meetings.length} meetings from Supabase`);
+                renderAll();
                 return;
             }
         }
@@ -759,6 +818,7 @@ async function loadMeetings() {
     } else {
         meetings = [];
     }
+    renderAll();
 }
 
 async function loadTasks() {
@@ -773,6 +833,7 @@ async function loadTasks() {
             if (data) {
                 tasks = data;
                 console.log(`✅ Loaded ${tasks.length} tasks from Supabase`);
+                renderTasksAndReminders();
                 return;
             }
         }
@@ -792,6 +853,7 @@ async function loadTasks() {
         ];
         saveTasksToStorage();
     }
+    renderTasksAndReminders();
 }
 
 // ========== ذخیره در localStorage ==========
@@ -1008,8 +1070,6 @@ async function saveNewUser() {
         closeAddUserModal();
         renderAll();
         showToast(`User "${username}" added`);
-    } else {
-        showToast("Failed to save user to database", "error");
     }
 }
 
@@ -1046,9 +1106,8 @@ async function addMeeting() {
     let user = users.find(u => u.id == userId);
     if(!user) return;
     
-    // ✅ استفاده از نام ستون‌های صحیح Supabase (snake_case)
     let newMeeting = { 
-        id: Date.now(),  // ✅ ارسال id
+        id: Date.now(),
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -1068,8 +1127,6 @@ async function addMeeting() {
         document.getElementById("meetingMom").value = "";
         renderAll();
         showToast(`Meeting scheduled for ${user.username}`);
-    } else {
-        showToast("Failed to save meeting to database", "error");
     }
 }
 
@@ -1100,8 +1157,6 @@ async function addTaskOrReminder() {
         document.getElementById("itemTime").value = "";
         document.getElementById("reminderDesc").value = "";
         showToast(`${type === "task" ? "Task" : "Reminder"} added`);
-    } else {
-        showToast("Failed to save to database", "error");
     }
 }
 
@@ -1176,9 +1231,8 @@ async function saveScheduledMeeting(userId) {
     let user = users.find(u => u.id === userId);
     if(!user) return;
     
-    // ✅ استفاده از نام ستون‌های صحیح Supabase (snake_case)
     let newMeeting = { 
-        id: Date.now(),  // ✅ ارسال id
+        id: Date.now(),
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -1195,8 +1249,6 @@ async function saveScheduledMeeting(userId) {
         closeScheduleModal();
         renderAll();
         showToast(`Meeting scheduled for ${user.username}`);
-    } else {
-        showToast("Failed to save meeting", "error");
     }
 }
 
@@ -1229,11 +1281,19 @@ async function saveEditedUser() {
     
     let user = users.find(u => u.id === currentEditUserId);
     if(user) {
+        let oldUsername = user.username;
         user.username = newUsername;
         user.email = newEmail;
         
-        const success = await saveToSupabase('users', user);
+        // ✅ استفاده از تابع update به جای save
+        const success = await updateUserInSupabase(user.id, { username: newUsername, email: newEmail });
         if (success) {
+            // به‌روزرسانی نام کاربر در جلسات
+            meetings.forEach(m => {
+                if (m.userId === user.id) {
+                    m.userName = newUsername;
+                }
+            });
             await loadUsers();
             await loadMeetings();
             saveUsersToStorage();
@@ -1242,6 +1302,8 @@ async function saveEditedUser() {
             showToast("User updated");
             closeEditUserModal();
         } else {
+            // برگرداندن به حالت قبلی در صورت خطا
+            user.username = oldUsername;
             showToast("Failed to update user", "error");
         }
     }
@@ -1340,7 +1402,6 @@ async function saveGroupMeeting() {
         let userId = parseInt(cb.value);
         let user = users.find(u => u.id === userId);
         if(user) {
-            // ✅ استفاده از نام ستون‌های صحیح Supabase (snake_case)
             let newMeeting = { 
                 id: Date.now() + Math.random(),
                 user_id: userId, 
@@ -1364,8 +1425,6 @@ async function saveGroupMeeting() {
         closeGroupMeetingModal();
         renderAll();
         showToast(`${type} meeting scheduled for ${addedCount} people`);
-    } else {
-        showToast("Failed to save meetings", "error");
     }
 }
 

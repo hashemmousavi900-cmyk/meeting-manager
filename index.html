@@ -262,11 +262,6 @@
             background: linear-gradient(135deg, #10b981, #059669);
         }
         
-        .user-photo-sm {
-            width: 40px;
-            height: 40px;
-        }
-        
         .photo-placeholder {
             width: 60px;
             height: 60px;
@@ -294,7 +289,6 @@
             display: none !important;
         }
 
-        /* استایل دکمه ویرایش در مودال */
         .edit-meeting-btn {
             background: #f59e0b;
             color: white;
@@ -310,6 +304,71 @@
         .edit-meeting-btn:hover {
             background: #d97706;
             transform: scale(1.05);
+        }
+
+        .mom-btn {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 10px;
+            margin: 0 2px;
+            transition: all 0.2s;
+        }
+        
+        .mom-btn:hover {
+            background: #7c3aed;
+            transform: scale(1.05);
+        }
+
+        .mom-btn.completed {
+            background: #10b981;
+        }
+        
+        .mom-btn.completed:hover {
+            background: #059669;
+        }
+
+        .email-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 10px;
+            margin: 0 2px;
+            transition: all 0.2s;
+        }
+        
+        .email-btn:hover {
+            background: #2563eb;
+            transform: scale(1.05);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-pending {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .status-email-sent {
+            background: #3b82f6;
+            color: white;
         }
     </style>
 </head>
@@ -604,6 +663,17 @@
     </div>
 </div>
 
+<!-- مودال ثبت MOM و ارسال ایمیل -->
+<div id="momModal" class="modal" onclick="closeMomModalOnOutside(event)">
+    <div class="modal-content">
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
+            <h3 class="text-lg font-bold text-gray-800">📝 ثبت MOM و ارسال ایمیل</h3>
+            <button onclick="closeMomModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
+        </div>
+        <div id="momModalBody"></div>
+    </div>
+</div>
+
 <div id="addUserModal" class="modal" onclick="closeAddUserModalOnOutside(event)">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
@@ -665,6 +735,16 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
 }
 
+function getStatusBadge(meeting) {
+    if (meeting.emailSent) {
+        return '<span class="status-badge status-email-sent">📧 ایمیل ارسال شد</span>';
+    } else if (meeting.mom && meeting.mom.trim() !== '' && meeting.mom !== 'No MOM') {
+        return '<span class="status-badge status-completed">✅ MOM ثبت شد</span>';
+    } else {
+        return '<span class="status-badge status-pending">⏳ در انتظار MOM</span>';
+    }
+}
+
 // ========== هدرهای درخواست API ==========
 const apiHeaders = {
     'apikey': SUPABASE_ANON_KEY,
@@ -719,6 +799,10 @@ async function saveToSupabase(tableName, data) {
 async function updateMeetingInSupabase(id, data) {
     try {
         console.log(`📤 Updating meeting ${id}:`, data);
+        
+        // حذف فیلدهای اضافی
+        delete data.created_at;
+        delete data.updated_at;
         
         const response = await fetch(`${SUPABASE_URL}/rest/v1/meetings?id=eq.${id}`, {
             method: 'PATCH',
@@ -800,6 +884,51 @@ async function deleteFromSupabase(tableName, id) {
     }
 }
 
+// ========== ارسال ایمیل (سیمولیشن) ==========
+async function sendEmail(meetingId) {
+    try {
+        const meeting = meetings.find(m => m.id === meetingId);
+        if (!meeting) {
+            showToast("جلسه یافت نشد!", "error");
+            return false;
+        }
+        
+        const user = users.find(u => u.id === meeting.userId);
+        if (!user) {
+            showToast("کاربر یافت نشد!", "error");
+            return false;
+        }
+        
+        // شبیه‌سازی ارسال ایمیل
+        console.log(`📧 Sending email to ${user.email || user.username}`);
+        console.log(`Subject: MOM for ${meeting.type} meeting on ${meeting.date}`);
+        console.log(`Body: ${meeting.mom}`);
+        
+        // در محیط واقعی، اینجا باید به یک API ایمیل متصل شوید
+        // مانند: EmailJS, SendGrid, یا SMTP
+        
+        // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
+        const updateData = { email_sent: true };
+        const success = await updateMeetingInSupabase(meetingId, updateData);
+        
+        if (success) {
+            // به‌روزرسانی در آرایه محلی
+            const localMeeting = meetings.find(m => m.id === meetingId);
+            if (localMeeting) {
+                localMeeting.emailSent = true;
+            }
+            showToast(`✅ ایمیل MOM برای ${user.username} ارسال شد!`, "success");
+            return true;
+        }
+        
+        return false;
+    } catch(e) {
+        console.error('Error sending email:', e);
+        showToast(`❌ خطا در ارسال ایمیل: ${e.message}`, "error");
+        return false;
+    }
+}
+
 // ========== بارگذاری از Supabase ==========
 async function loadUsers() {
     try {
@@ -854,7 +983,8 @@ async function loadMeetings() {
                     time: m.time,
                     duration: m.duration,
                     type: m.type,
-                    mom: m.mom
+                    mom: m.mom || '',
+                    emailSent: m.email_sent || false
                 }));
                 console.log(`✅ Loaded ${meetings.length} meetings from Supabase`);
                 renderAll();
@@ -1167,7 +1297,8 @@ async function addMeeting() {
         time: timeFormatted, 
         duration: parseInt(duration), 
         type: type, 
-        mom: mom 
+        mom: mom,
+        email_sent: false
     };
     
     const success = await saveToSupabase('meetings', newMeeting);
@@ -1292,7 +1423,8 @@ async function saveScheduledMeeting(userId) {
         time: timeFormatted, 
         duration: parseInt(duration), 
         type: type, 
-        mom: mom 
+        mom: mom,
+        email_sent: false
     };
     
     const success = await saveToSupabase('meetings', newMeeting);
@@ -1362,7 +1494,7 @@ async function saveEditedUser() {
 function closeEditUserModal() { document.getElementById("editUserModal").style.display = "none"; }
 function closeEditUserModalOnOutside(event) { if(event.target === document.getElementById("editUserModal")) closeEditUserModal(); }
 
-// ========== نمایش جزییات کاربر با دکمه ویرایش جلسه ==========
+// ========== نمایش جزییات کاربر با دکمه‌های MOM و ایمیل ==========
 function showUserDetails(userId) {
     let user = users.find(u => u.id === userId);
     let userMeetings = meetings.filter(m => m.userId === userId);
@@ -1373,6 +1505,9 @@ function showUserDetails(userId) {
     } else {
         let meetingsHtml = `<div class="space-y-3 max-h-96 overflow-y-auto">`;
         for(let m of userMeetings) {
+            const statusBadge = getStatusBadge(m);
+            const hasMom = m.mom && m.mom.trim() !== '' && m.mom !== 'No MOM';
+            
             meetingsHtml += `
                 <div class="border-b border-gray-100 pb-3 mb-2">
                     <div class="flex justify-between items-start">
@@ -1380,17 +1515,25 @@ function showUserDetails(userId) {
                             <div class="font-semibold">${m.date} - ${m.time}</div>
                             <div class="text-xs text-gray-500">${m.duration} min</div>
                             <div class="text-xs bg-emerald-100 px-2 py-0.5 rounded-full">${m.type}</div>
+                            <div class="text-xs mt-1">${statusBadge}</div>
                         </div>
-                        <div class="flex gap-1">
-                            <button onclick="openEditMeetingModal(${m.id})" class="edit-meeting-btn" title="Edit Meeting">
+                        <div class="flex gap-1 flex-wrap">
+                            <button onclick="openMomModal(${m.id})" class="mom-btn ${hasMom ? 'completed' : ''}" title="ثبت MOM">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            ${hasMom ? `<button onclick="sendEmailForMeeting(${m.id})" class="email-btn" title="ارسال ایمیل MOM">
+                                <i class="fas fa-envelope"></i>
+                            </button>` : ''}
+                            <button onclick="openEditMeetingModal(${m.id})" class="edit-meeting-btn" title="ویرایش جلسه">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="deleteMeeting(${m.id})" class="text-red-400 text-xs" title="Delete Meeting">
+                            <button onclick="deleteMeeting(${m.id})" class="text-red-400 text-xs" title="حذف جلسه">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">📝 ${escapeHtml(m.mom.substring(0,100))}${m.mom.length>100?'...':''}</div>
+                    ${hasMom ? `<div class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">📝 ${escapeHtml(m.mom.substring(0,100))}${m.mom.length>100?'...':''}</div>` : 
+                              `<div class="text-xs text-gray-400 mt-2 italic">هنوز MOM ثبت نشده است</div>`}
                 </div>
             `;
         }
@@ -1398,6 +1541,94 @@ function showUserDetails(userId) {
         document.getElementById("modalBody").innerHTML = meetingsHtml;
     }
     document.getElementById("userModal").style.display = "flex";
+}
+
+// ========== مودال ثبت MOM ==========
+function openMomModal(meetingId) {
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) {
+        showToast("جلسه یافت نشد!", "error");
+        return;
+    }
+    
+    const user = users.find(u => u.id === meeting.userId);
+    const userName = user ? user.username : meeting.userName;
+    
+    let html = `
+        <div class="space-y-3">
+            <div class="bg-gray-50 p-3 rounded-lg">
+                <div class="text-sm font-semibold">${userName}</div>
+                <div class="text-xs text-gray-500">${meeting.date} - ${meeting.time} | ${meeting.type}</div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">MOM (Minutes of Meeting)</label>
+                <textarea id="momText" rows="6" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="لطفاً صورتجلسه را وارد کنید...">${meeting.mom && meeting.mom !== 'No MOM' ? escapeHtml(meeting.mom) : ''}</textarea>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="saveMomAndClose(${meetingId})" class="flex-1 btn-gradient-primary text-white py-2 rounded-lg">💾 ذخیره MOM</button>
+                <button onclick="closeMomModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">انصراف</button>
+            </div>
+            <div class="text-xs text-gray-400 text-center">
+                <i class="fas fa-info-circle"></i> پس از ذخیره، می‌توانید ایمیل MOM را ارسال کنید
+            </div>
+        </div>
+    `;
+    
+    document.getElementById("momModalBody").innerHTML = html;
+    document.getElementById("momModal").style.display = "flex";
+}
+
+async function saveMomAndClose(meetingId) {
+    const momText = document.getElementById("momText").value.trim();
+    if (!momText) {
+        showToast("لطفاً متن MOM را وارد کنید!", "error");
+        return;
+    }
+    
+    const success = await updateMeetingInSupabase(meetingId, { mom: momText });
+    if (success) {
+        await loadMeetings();
+        saveMeetingsToStorage();
+        closeMomModal();
+        renderAll();
+        showToast("✅ MOM با موفقیت ثبت شد!");
+        
+        // سوال از کاربر برای ارسال ایمیل
+        if (confirm("آیا می‌خواهید ایمیل MOM را برای کاربر ارسال کنید؟")) {
+            await sendEmailForMeeting(meetingId);
+        }
+    }
+}
+
+function closeMomModal() {
+    document.getElementById("momModal").style.display = "none";
+}
+
+function closeMomModalOnOutside(event) {
+    if (event.target === document.getElementById("momModal")) {
+        closeMomModal();
+    }
+}
+
+// ========== ارسال ایمیل برای جلسه ==========
+async function sendEmailForMeeting(meetingId) {
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) {
+        showToast("جلسه یافت نشد!", "error");
+        return;
+    }
+    
+    if (!meeting.mom || meeting.mom.trim() === '' || meeting.mom === 'No MOM') {
+        showToast("ابتدا MOM را ثبت کنید!", "error");
+        return;
+    }
+    
+    const success = await sendEmail(meetingId);
+    if (success) {
+        await loadMeetings();
+        saveMeetingsToStorage();
+        renderAll();
+    }
 }
 
 // ========== ویرایش جلسه ==========
@@ -1451,7 +1682,7 @@ function openEditMeetingModal(meetingId) {
     
     document.getElementById("editMeetingModalBody").innerHTML = html;
     document.getElementById("editMeetingModal").style.display = "flex";
-    closeModal(); // بستن مودال userModal
+    closeModal();
 }
 
 async function saveEditedMeeting() {
@@ -1576,7 +1807,8 @@ async function saveGroupMeeting() {
                 time: timeFormatted, 
                 duration: durationNum, 
                 type: type, 
-                mom: mom 
+                mom: mom,
+                email_sent: false
             };
             const success = await saveToSupabase('meetings', newMeeting);
             if (success) {
@@ -1687,37 +1919,72 @@ function downloadFile(content, filename) {
 }
 
 function exportMeetingsReport() {
-    let report = meetings.map(m => ({ User: m.userName, Date: m.date, Time: m.time, Duration: m.duration, Type: m.type }));
+    let report = meetings.map(m => ({ 
+        User: m.userName, 
+        Date: m.date, 
+        Time: m.time, 
+        Duration: m.duration, 
+        Type: m.type,
+        MOM: m.mom || 'No MOM',
+        EmailSent: m.emailSent ? 'Yes' : 'No'
+    }));
     downloadFile(JSON.stringify(report, null, 2), `meetings_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Meetings exported");
 }
+
 function exportUsersReport() {
     let report = users.map(u => ({ Username: u.username, Email: u.email, Meetings: meetings.filter(m => m.userId === u.id).length }));
     downloadFile(JSON.stringify(report, null, 2), `users_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Users exported");
 }
+
 function exportTasksReport() {
     let report = tasks.map(t => ({ Type: t.type, Title: t.title, Date: t.date, Time: t.time, Completed: t.completed }));
     downloadFile(JSON.stringify(report, null, 2), `tasks_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Tasks exported");
 }
+
 function exportFullReport() {
     let typeCount = {};
     meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
-    let report = { exportDate: new Date().toISOString(), summary: { totalUsers: users.length, totalMeetings: meetings.length, totalTasks: tasks.length, meetingTypes: typeCount }, users: users, meetings: meetings, tasks: tasks };
+    let report = { 
+        exportDate: new Date().toISOString(), 
+        summary: { 
+            totalUsers: users.length, 
+            totalMeetings: meetings.length, 
+            totalTasks: tasks.length, 
+            meetingTypes: typeCount,
+            meetingsWithMOM: meetings.filter(m => m.mom && m.mom.trim() !== '' && m.mom !== 'No MOM').length,
+            emailsSent: meetings.filter(m => m.emailSent).length
+        }, 
+        users: users, 
+        meetings: meetings, 
+        tasks: tasks 
+    };
     downloadFile(JSON.stringify(report, null, 2), `full_report_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Full report exported");
 }
+
 function exportStatistics() {
-    let stats = { date: new Date().toISOString(), users: users.length, meetings: meetings.length, avgDuration: meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0, completedTasks: tasks.filter(t => t.completed).length };
+    let stats = { 
+        date: new Date().toISOString(), 
+        users: users.length, 
+        meetings: meetings.length, 
+        avgDuration: meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0,
+        completedTasks: tasks.filter(t => t.completed).length,
+        meetingsWithMOM: meetings.filter(m => m.mom && m.mom.trim() !== '' && m.mom !== 'No MOM').length,
+        emailsSent: meetings.filter(m => m.emailSent).length
+    };
     downloadFile(JSON.stringify(stats, null, 2), `stats_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Statistics exported");
 }
+
 function exportFullJSON() {
     let exportData = { users: users, meetings: meetings, tasks: tasks, exportDate: new Date().toISOString() };
     downloadFile(JSON.stringify(exportData, null, 2), `meeting_manager_backup_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Data exported");
 }
+
 function importJSON(input) {
     let file = input.files[0];
     if(!file) return;
@@ -1732,6 +1999,7 @@ function importJSON(input) {
             }
             if(imported.meetings) {
                 for(let m of imported.meetings) {
+                    if (!m.email_sent) m.email_sent = false;
                     await saveToSupabase('meetings', m);
                 }
             }

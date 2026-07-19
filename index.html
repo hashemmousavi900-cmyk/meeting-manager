@@ -370,6 +370,39 @@
             background: #3b82f6;
             color: white;
         }
+
+        /* استایل‌های بخش MOM */
+        .mom-meeting-item {
+            background: white;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+        .mom-meeting-item:hover {
+            border-color: #8b5cf6;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+        }
+        .mom-status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .mom-status-pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .mom-status-mom {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .mom-status-email {
+            background: #dbeafe;
+            color: #1e40af;
+        }
     </style>
 </head>
 <body>
@@ -403,7 +436,6 @@
                 <i class="fas fa-tasks w-5"></i> Tasks & Reminders
                 <span id="taskNotificationBadge" class="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 hidden">0</span>
             </a>
-            <!-- گزینه جدید MOM & Email -->
             <a href="#" data-tab="mom" class="sidebar-link flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-sm font-medium">
                 <i class="fas fa-pen-fancy w-5"></i> Edit MOM & Send Email
             </a>
@@ -605,7 +637,6 @@
                     <span class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full">مدیریت صورتجلسات و ارسال ایمیل</span>
                 </div>
                 
-                <!-- فیلترها -->
                 <div class="bg-white/95 rounded-xl border border-purple-200 p-4 shadow-md">
                     <div class="form-row">
                         <div class="form-field" style="flex: 2;">
@@ -628,7 +659,6 @@
                     </div>
                 </div>
 
-                <!-- لیست جلسات برای MOM -->
                 <div class="bg-white/95 rounded-xl border border-purple-200 p-4 shadow-md">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-bold text-gray-800 text-md"><i class="fas fa-list mr-2 text-purple-600"></i>لیست جلسات</h3>
@@ -698,7 +728,6 @@
     </div>
 </div>
 
-<!-- مودال ویرایش جلسه -->
 <div id="editMeetingModal" class="modal" onclick="closeEditMeetingModalOnOutside(event)">
     <div class="modal-content">
         <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
@@ -709,10 +738,9 @@
     </div>
 </div>
 
-<!-- مودال ثبت MOM و ارسال ایمیل -->
 <div id="momModal" class="modal" onclick="closeMomModalOnOutside(event)">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-200">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="flex justify-between items-center mb-3 pb-2 border-b border-purple-200">
             <h3 class="text-lg font-bold text-gray-800">📝 ثبت MOM و ارسال ایمیل</h3>
             <button onclick="closeMomModal()" class="text-gray-400 hover:text-red-500 text-xl">&times;</button>
         </div>
@@ -784,11 +812,11 @@ function escapeHtml(str) {
 
 function getStatusBadge(meeting) {
     if (meeting.emailSent) {
-        return '<span class="status-badge status-email-sent">📧 ایمیل ارسال شد</span>';
+        return '<span class="mom-status-badge mom-status-email">📧 ایمیل ارسال شد</span>';
     } else if (meeting.mom && meeting.mom.trim() !== '' && meeting.mom !== 'No MOM') {
-        return '<span class="status-badge status-completed">✅ MOM ثبت شد</span>';
+        return '<span class="mom-status-badge mom-status-mom">✅ MOM ثبت شد</span>';
     } else {
-        return '<span class="status-badge status-pending">⏳ در انتظار MOM</span>';
+        return '<span class="mom-status-badge mom-status-pending">⏳ در انتظار MOM</span>';
     }
 }
 
@@ -930,7 +958,7 @@ async function deleteFromSupabase(tableName, id) {
     }
 }
 
-// ========== ارسال ایمیل از طریق Outlook (mailto) ==========
+// ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 ==========
 function sendEmailViaOutlook(meetingId) {
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) {
@@ -954,28 +982,77 @@ function sendEmailViaOutlook(meetingId) {
         return;
     }
     
-    // ساخت موضوع و متن ایمیل
-    const subject = encodeURIComponent(`MOM: ${meeting.type} Meeting - ${meeting.date}`);
-    const body = encodeURIComponent(
-        `Dear ${user.username},\n\n` +
-        `Please find below the Minutes of Meeting (MOM) for the ${meeting.type} meeting held on ${meeting.date} at ${meeting.time}.\n\n` +
-        `--- MOM ---\n${meeting.mom}\n\n` +
-        `--- Meeting Details ---\n` +
-        `Date: ${meeting.date}\n` +
-        `Time: ${meeting.time}\n` +
-        `Duration: ${meeting.duration} minutes\n` +
-        `Type: ${meeting.type}\n\n` +
-        `Best regards,\n` +
-        `Meeting Manager System`
-    );
+    // ========== ساخت متن ایمیل با تمپلیت 3 ==========
+    const momText = meeting.mom.trim();
+    const separator = '═══════════════════════════════════════════════════════════════════';
+    const line = '───────────────────────────────────────────────────────────────────';
+    
+    // ساخت جدول جزئیات جلسه با کادر دوتایی
+    const tableWidth = 60;
+    const sep = '═'.repeat(tableWidth);
+    const topBorder = '╔' + sep + '╗';
+    const midBorder = '╟' + '─'.repeat(tableWidth) + '╢';
+    const bottomBorder = '╚' + sep + '╝';
+    
+    // استخراج ساعت شروع و پایان
+    let startTime = meeting.time;
+    let endTime = '';
+    if (meeting.time.includes(' - ')) {
+        const parts = meeting.time.split(' - ');
+        startTime = parts[0];
+        endTime = parts[1];
+    }
+    
+    const rows = [
+        ['  🏷️ نوع جلسه', `  ${meeting.type}`],
+        ['  📅 تاریخ برگزاری', `  ${meeting.date}`],
+        ['  ⏰ ساعت شروع', `  ${startTime}`],
+        ['  ⏰ ساعت پایان', `  ${endTime || ''}`],
+        ['  ⏱️ مدت زمان', `  ${meeting.duration} دقیقه`],
+        ['  👤 نام کارمند', `  ${user.username}`],
+        ['  📧 ایمیل', `  ${user.email}`]
+    ];
+    
+    let tableRows = [];
+    rows.forEach((row, index) => {
+        const left = row[0].padEnd(27);
+        const right = row[1].padEnd(28);
+        tableRows.push(`│${left}│${right}│`);
+        if (index < rows.length - 1) {
+            tableRows.push(midBorder);
+        }
+    });
+    
+    const table = topBorder + '\n' + tableRows.join('\n') + '\n' + bottomBorder;
+    
+    // ساخت کل متن ایمیل
+    const emailBody = `${separator}
+                      📋 MOM OF MEETING
+${separator}
+
+📝 AGENDA / خلاصه جلسه
+${line}
+
+${momText}
+
+${line}
+📊 MEETING DETAILS / جزئیات جلسه
+${line}
+
+${table}
+
+${separator}`;
+    
+    // ساخت موضوع
+    const subject = `MOM: ${meeting.type} Meeting - ${meeting.date}`;
     
     // ساخت لینک mailto
-    const mailtoLink = `mailto:${user.email}?subject=${subject}&body=${body}`;
+    const mailtoLink = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
     
     // باز کردن Outlook
     window.open(mailtoLink, '_blank');
     
-    // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس (اختیاری)
+    // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
     updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
         const localMeeting = meetings.find(m => m.id === meetingId);
         if (localMeeting) {
@@ -1306,13 +1383,11 @@ function renderMomMeetings() {
     
     if (!container) return;
     
-    // اعمال فیلترها
     const searchTerm = document.getElementById('momSearchInput')?.value?.toLowerCase() || '';
     const statusFilter = document.getElementById('momStatusFilter')?.value || 'all';
     
     let filtered = [...meetings];
     
-    // فیلتر جستجو
     if (searchTerm) {
         filtered = filtered.filter(m => {
             const user = users.find(u => u.id === m.userId);
@@ -1323,7 +1398,6 @@ function renderMomMeetings() {
         });
     }
     
-    // فیلتر وضعیت
     if (statusFilter === 'pending') {
         filtered = filtered.filter(m => !m.mom || m.mom.trim() === '' || m.mom === 'No MOM');
     } else if (statusFilter === 'mom') {
@@ -1332,7 +1406,6 @@ function renderMomMeetings() {
         filtered = filtered.filter(m => m.emailSent);
     }
     
-    // مرتب‌سازی بر اساس تاریخ (جدیدترین اول)
     filtered.sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
     
     momFilteredMeetings = filtered;
@@ -1358,12 +1431,12 @@ function renderMomMeetings() {
         const canSendEmail = hasMom && userEmail && userEmail !== '';
         
         return `
-            <div class="task-item text-sm p-3 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition">
+            <div class="mom-meeting-item">
                 <div class="flex justify-between items-start">
                     <div class="flex-1">
-                        <div class="font-medium text-gray-800 text-xs">
+                        <div class="font-medium text-gray-800 text-sm">
                             🕐 ${m.time} - ${m.type}
-                            <span class="ml-2">${statusBadge}</span>
+                            <span class="mr-2">${statusBadge}</span>
                         </div>
                         <div class="text-xs text-gray-600 mt-1">
                             👤 ${escapeHtml(userName)}
@@ -1724,7 +1797,7 @@ function openMomModal(meetingId) {
     let html = `
         <div class="space-y-3">
             <div class="bg-gray-50 p-3 rounded-lg">
-                <div class="text-sm font-semibold">${userName}</div>
+                <div class="text-sm font-semibold">${escapeHtml(userName)}</div>
                 <div class="text-xs text-gray-500">${meeting.date} - ${meeting.time} | ${meeting.type}</div>
                 ${user && user.email ? `<div class="text-xs text-blue-600 mt-1">📧 ${escapeHtml(user.email)}</div>` : ''}
             </div>
@@ -1749,7 +1822,6 @@ function openMomModal(meetingId) {
 
 function openMomModalFromTab(meetingId) {
     openMomModal(meetingId);
-    // بستن مودال فعلی اگر باز است
     closeModal();
 }
 

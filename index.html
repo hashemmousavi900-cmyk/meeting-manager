@@ -961,6 +961,7 @@ async function deleteFromSupabase(tableName, id) {
 // ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 ==========
 // ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 (بدون باز شدن تب جدید) ==========
 // ========== 📧 ارسال ایمیل از Outlook با فرمت یکسان ==========
+// ========== 📧 ارسال ایمیل از Outlook با فرمت ساده ==========
 function sendEmailViaOutlook(meetingId) {
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) {
@@ -984,47 +985,11 @@ function sendEmailViaOutlook(meetingId) {
         return;
     }
     
-    // ========== ساخت متن ایمیل با فرمت مورد نظر (یکسان برای هر دو روش) ==========
+    // ========== ساخت متن ایمیل با فرمت ساده ==========
     const momText = meeting.mom.trim();
     const separator = '─────────────────────────────';
     
-    // استخراج ساعت شروع و پایان
-    let startTime = meeting.time;
-    let endTime = '';
-    if (meeting.time.includes(' - ')) {
-        const parts = meeting.time.split(' - ');
-        startTime = parts[0];
-        endTime = parts[1];
-    }
-    
-    // ساخت جدول با کادر
-    const col1 = '    عنوان جلسه    ';
-    const col2 = '    مدت زمان    ';
-    const col3 = '   ساعت جلسه    ';
-    const col4 = '   تاریخ جلسه   ';
-    const col5 = '    نام کارمند    ';
-    
-    // محاسبه عرض ستون‌ها برای چیدمان بهتر
-    const typeDisplay = meeting.type.padEnd(16);
-    const durationDisplay = String(meeting.duration + ' دقیقه').padEnd(14);
-    const timeDisplay = meeting.time.padEnd(16);
-    const dateDisplay = meeting.date.padEnd(16);
-    const nameDisplay = user.username.padEnd(16);
-    
-    const row1 = `│ ${typeDisplay} │ ${durationDisplay} │ ${timeDisplay} │ ${dateDisplay} │ ${nameDisplay} │`;
-    
-    const totalWidth = col1.length + col2.length + col3.length + col4.length + col5.length + 14;
-    const topBorder = '┌' + '─'.repeat(totalWidth - 2) + '┐';
-    const midBorder = '├' + '─'.repeat(totalWidth - 2) + '┤';
-    const bottomBorder = '└' + '─'.repeat(totalWidth - 2) + '┘';
-    
-    const table = topBorder + '\n' +
-                  `│${col1}│${col2}│${col3}│${col4}│${col5}│` + '\n' +
-                  midBorder + '\n' +
-                  row1 + '\n' +
-                  bottomBorder;
-    
-    // ساخت کل متن ایمیل
+    // ساخت کل متن ایمیل (بدون جدول)
     const emailBody = `با سلام،
 
 صورتجلسه جلسه ${meeting.type} مورخ ${meeting.date} ساعت ${meeting.time} به شرح زیر می‌باشد:
@@ -1044,10 +1009,6 @@ ${separator}
 🏷️ نوع جلسه: ${meeting.type}
 
 ${separator}
-📊 جدول جزئیات جلسه
-${table}
-
-${separator}
 با احترام
 سیستم مدیریت جلسات`;
     
@@ -1063,7 +1024,7 @@ ${separator}
                 var mailItem = outlookApp.CreateItem(0);
                 mailItem.To = user.email;
                 mailItem.Subject = subject;
-                mailItem.Body = emailBody;  // ✅ حالا از emailBody استفاده می‌کنه
+                mailItem.Body = emailBody;
                 mailItem.Display();
                 
                 // به‌روزرسانی وضعیت
@@ -1085,7 +1046,6 @@ ${separator}
         // روش دوم: استفاده از mailto با iframe
         const mailtoLink = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
         
-        // استفاده از iframe برای باز کردن mailto بدون تغییر صفحه
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = mailtoLink;

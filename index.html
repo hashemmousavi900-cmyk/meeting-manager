@@ -959,6 +959,7 @@ async function deleteFromSupabase(tableName, id) {
 }
 
 // ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 ==========
+// ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 (بدون باز شدن تب جدید) ==========
 function sendEmailViaOutlook(meetingId) {
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) {
@@ -982,17 +983,9 @@ function sendEmailViaOutlook(meetingId) {
         return;
     }
     
-    // ========== ساخت متن ایمیل با تمپلیت 3 ==========
+    // ========== ساخت متن ایمیل با فرمت مورد نظر ==========
     const momText = meeting.mom.trim();
-    const separator = '═══════════════════════════════════════════════════════════════════';
-    const line = '───────────────────────────────────────────────────────────────────';
-    
-    // ساخت جدول جزئیات جلسه با کادر دوتایی
-    const tableWidth = 60;
-    const sep = '═'.repeat(tableWidth);
-    const topBorder = '╔' + sep + '╗';
-    const midBorder = '╟' + '─'.repeat(tableWidth) + '╢';
-    const bottomBorder = '╚' + sep + '╝';
+    const separator = '─────────────────────────────';
     
     // استخراج ساعت شروع و پایان
     let startTime = meeting.time;
@@ -1003,67 +996,116 @@ function sendEmailViaOutlook(meetingId) {
         endTime = parts[1];
     }
     
-    const rows = [
-        ['  🏷️ نوع جلسه', `  ${meeting.type}`],
-        ['  📅 تاریخ برگزاری', `  ${meeting.date}`],
-        ['  ⏰ ساعت شروع', `  ${startTime}`],
-        ['  ⏰ ساعت پایان', `  ${endTime || ''}`],
-        ['  ⏱️ مدت زمان', `  ${meeting.duration} دقیقه`],
-        ['  👤 نام کارمند', `  ${user.username}`],
-        ['  📧 ایمیل', `  ${user.email}`]
-    ];
+    // ساخت جدول با کادر
+    const col1 = '    عنوان جلسه    ';
+    const col2 = '    مدت زمان    ';
+    const col3 = '   ساعت جلسه    ';
+    const col4 = '   تاریخ جلسه   ';
+    const col5 = '    نام کارمند    ';
     
-    let tableRows = [];
-    rows.forEach((row, index) => {
-        const left = row[0].padEnd(27);
-        const right = row[1].padEnd(28);
-        tableRows.push(`│${left}│${right}│`);
-        if (index < rows.length - 1) {
-            tableRows.push(midBorder);
-        }
-    });
+    const row1 = `│ ${meeting.type.padEnd(16)} │ ${String(meeting.duration + ' دقیقه').padEnd(14)} │ ${meeting.time.padEnd(16)} │ ${meeting.date.padEnd(16)} │ ${user.username.padEnd(16)} │`;
     
-    const table = topBorder + '\n' + tableRows.join('\n') + '\n' + bottomBorder;
+    const totalWidth = col1.length + col2.length + col3.length + col4.length + col5.length + 14;
+    const topBorder = '┌' + '─'.repeat(totalWidth - 2) + '┐';
+    const midBorder = '├' + '─'.repeat(totalWidth - 2) + '┤';
+    const bottomBorder = '└' + '─'.repeat(totalWidth - 2) + '┘';
     
-    // ساخت کل متن ایمیل
-    const emailBody = `${separator}
-                      📋 MOM OF MEETING
+    const table = topBorder + '\n' +
+                  `│${col1}│${col2}│${col3}│${col4}│${col5}│` + '\n' +
+                  midBorder + '\n' +
+                  row1 + '\n' +
+                  bottomBorder;
+    
+    // ساخت کل متن ایمیل به صورت راست‌چین
+    const emailBody = `با سلام،
+
+صورتجلسه جلسه ${meeting.type} مورخ ${meeting.date} ساعت ${meeting.time} به شرح زیر می‌باشد:
+
 ${separator}
-
-📝 AGENDA / خلاصه جلسه
-${line}
-
+📋 صورتجلسه (MOM)
+${separator}
 ${momText}
 
-${line}
-📊 MEETING DETAILS / جزئیات جلسه
-${line}
+${separator}
+📌 جزئیات جلسه
+${separator}
+👤 شرکت‌کننده: ${user.username}
+📅 تاریخ: ${meeting.date}
+⏰ زمان: ${meeting.time}
+⏱️ مدت زمان: ${meeting.duration} دقیقه
+🏷️ نوع جلسه: ${meeting.type}
 
+${separator}
+📊 جدول جزئیات جلسه
 ${table}
 
-${separator}`;
+${separator}
+با احترام
+سیستم مدیریت جلسات`;
     
     // ساخت موضوع
-    const subject = `MOM: ${meeting.type} Meeting - ${meeting.date}`;
+    const subject = `صورتجلسه جلسه ${meeting.type} - ${meeting.date}`;
     
-    // ساخت لینک mailto
-    const mailtoLink = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-    
-    // باز کردن Outlook
-    window.open(mailtoLink, '_blank');
-    
-    // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
-    updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
-        const localMeeting = meetings.find(m => m.id === meetingId);
-        if (localMeeting) {
-            localMeeting.emailSent = true;
+    // ========== ارسال ایمیل بدون باز شدن تب جدید (با استفاده از iframe) ==========
+    try {
+        // روش اول: استفاده از ActiveX (IE و Edge Legacy)
+        if (window.ActiveXObject) {
+            try {
+                var outlookApp = new ActiveXObject("Outlook.Application");
+                var mailItem = outlookApp.CreateItem(0);
+                mailItem.To = user.email;
+                mailItem.Subject = subject;
+                mailItem.Body = emailBody;
+                mailItem.Display();
+                
+                // به‌روزرسانی وضعیت
+                updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
+                    const localMeeting = meetings.find(m => m.id === meetingId);
+                    if (localMeeting) {
+                        localMeeting.emailSent = true;
+                    }
+                    renderAll();
+                });
+                
+                showToast(`📧 Outlook با ایمیل برای ${user.username} باز شد!`, "success");
+                return;
+            } catch(e) {
+                console.log('ActiveX failed:', e.message);
+            }
         }
-        renderAll();
-    });
-    
-    showToast(`📧 Outlook برای ارسال ایمیل به ${user.username} باز شد!`, "success");
+        
+        // روش دوم: استفاده از mailto با target="_self" (بدون باز شدن تب جدید)
+        const mailtoLink = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+        
+        // استفاده از iframe برای باز کردن mailto بدون تغییر صفحه
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = mailtoLink;
+        document.body.appendChild(iframe);
+        
+        // حذف iframe بعد از چند ثانیه
+        setTimeout(() => {
+            if (iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
+        }, 3000);
+        
+        // به‌روزرسانی وضعیت
+        updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
+            const localMeeting = meetings.find(m => m.id === meetingId);
+            if (localMeeting) {
+                localMeeting.emailSent = true;
+            }
+            renderAll();
+        });
+        
+        showToast(`📧 ایمیل برای ${user.username} ارسال شد!`, "success");
+        
+    } catch(error) {
+        console.error('Error sending email:', error);
+        showToast('❌ خطا در ارسال ایمیل: ' + error.message, "error");
+    }
 }
-
 // ========== بارگذاری از Supabase ==========
 async function loadUsers() {
     try {

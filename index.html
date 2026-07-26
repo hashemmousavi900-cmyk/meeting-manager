@@ -962,6 +962,7 @@ async function deleteFromSupabase(tableName, id) {
 // ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 (بدون باز شدن تب جدید) ==========
 // ========== 📧 ارسال ایمیل از Outlook با فرمت یکسان ==========
 // ========== 📧 ارسال ایمیل از Outlook با فرمت ساده ==========
+// ========== 📧 ارسال ایمیل از Outlook با فرمت جدید ==========
 function sendEmailViaOutlook(meetingId) {
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) {
@@ -985,29 +986,25 @@ function sendEmailViaOutlook(meetingId) {
         return;
     }
     
-    // ========== ساخت متن ایمیل با فرمت ساده ==========
+    // ========== ساخت متن ایمیل با فرمت جدید ==========
     const momText = meeting.mom.trim();
-    const separator = '══════════════════════════════════';
+    const separator = '|══════════════════════════════════|';
     
-    // ساخت کل متن ایمیل (بدون جدول)
+    // ساخت کل متن ایمیل
     const emailBody = `با سلام،
 
-صورتجلسه جلسه ${meeting.type} مورخ ${meeting.date} ساعت ${meeting.time} به شرح زیر می‌باشد:
+صورتجلسه Meeting(${meeting.type}) مورخ ${meeting.date} ساعت ${meeting.time} به شرح زیر می‌باشد:
 
 ${separator}
 📋 صورتجلسه (MOM) 📋
-${separator}
 ${momText}
-
 ${separator}
 📌 جزئیات جلسه
-${separator}
 👤  شرکت‌کننده: ${user.username}
 📅  تاریخ: ${meeting.date}
 ⏰  زمان: ${meeting.time}
 ⏱️  مدت زمان: ${meeting.duration} دقیقه
 🏷️  نوع جلسه: ${meeting.type}
-
 ${separator}
 با احترام
 سیستم مدیریت جلسات`;

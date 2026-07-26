@@ -963,54 +963,67 @@ async function deleteFromSupabase(tableName, id) {
 // ========== 📧 ارسال ایمیل از Outlook با فرمت یکسان ==========
 // ========== 📧 ارسال ایمیل از Outlook با فرمت ساده ==========
 // ========== 📧 ارسال ایمیل از Outlook با فرمت جدید ==========
+// ========== 📧 ارسال ایمیل از Outlook با فرمت جدید (اطلاعات از دیتابیس) ==========
 function sendEmailViaOutlook(meetingId) {
+    // 1️⃣ گرفتن اطلاعات جلسه از دیتابیس
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) {
         showToast("جلسه یافت نشد!", "error");
         return;
     }
     
+    // 2️⃣ گرفتن اطلاعات کاربر از دیتابیس
     const user = users.find(u => u.id === meeting.userId);
     if (!user) {
         showToast("کاربر یافت نشد!", "error");
         return;
     }
     
+    // 3️⃣ بررسی وجود ایمیل کاربر
     if (!user.email || user.email === '') {
         showToast("کاربر ایمیل ندارد! لطفاً ابتدا ایمیل کاربر را ثبت کنید.", "error");
         return;
     }
     
+    // 4️⃣ بررسی وجود MOM
     if (!meeting.mom || meeting.mom.trim() === '' || meeting.mom === 'No MOM') {
         showToast("ابتدا MOM را ثبت کنید!", "error");
         return;
     }
     
-    // ========== ساخت متن ایمیل با فرمت جدید ==========
+    // ========== ساخت متن ایمیل با اطلاعات دیتابیس ==========
     const momText = meeting.mom.trim();
     const separator = '|══════════════════════════════════|';
     
-    // ساخت کل متن ایمیل
+    // دریافت اطلاعات از دیتابیس
+    const meetingType = meeting.type;           // نوع جلسه
+    const meetingDate = meeting.date;           // تاریخ جلسه
+    const meetingTime = meeting.time;           // ساعت جلسه
+    const meetingDuration = meeting.duration;   // مدت زمان جلسه
+    const userName = user.username;             // نام شرکت‌کننده
+    const userEmail = user.email;              // ایمیل شرکت‌کننده (اختیاری)
+    
+    // ساخت کل متن ایمیل با اطلاعات دیتابیس
     const emailBody = `با سلام،
 
-صورتجلسه Meeting(${meeting.type}) مورخ ${meeting.date} ساعت ${meeting.time} به شرح زیر می‌باشد:
+صورتجلسه Meeting(${meetingType}) مورخ ${meetingDate} ساعت ${meetingTime} به شرح زیر می‌باشد:
 
 ${separator}
 📋 صورتجلسه (MOM) 📋
 ${momText}
 ${separator}
 📌 جزئیات جلسه
-👤  شرکت‌کننده: ${user.username}
-📅  تاریخ: ${meeting.date}
-⏰  زمان: ${meeting.time}
-⏱️  مدت زمان: ${meeting.duration} دقیقه
-🏷️  نوع جلسه: ${meeting.type}
+👤  شرکت‌کننده: ${userName}
+📅  تاریخ: ${meetingDate}
+⏰  زمان: ${meetingTime}
+⏱️  مدت زمان: ${meetingDuration} دقیقه
+🏷️  نوع جلسه: ${meetingType}
 ${separator}
 با احترام
 سیستم مدیریت جلسات`;
     
-    // ساخت موضوع
-    const subject = `صورتجلسه جلسه ${meeting.type} - ${meeting.date}`;
+    // ساخت موضوع با اطلاعات دیتابیس
+    const subject = `صورتجلسه جلسه ${meetingType} - ${meetingDate}`;
     
     // ========== ارسال ایمیل ==========
     try {
@@ -1024,7 +1037,7 @@ ${separator}
                 mailItem.Body = emailBody;
                 mailItem.Display();
                 
-                // به‌روزرسانی وضعیت
+                // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
                 updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
                     const localMeeting = meetings.find(m => m.id === meetingId);
                     if (localMeeting) {
@@ -1033,7 +1046,7 @@ ${separator}
                     renderAll();
                 });
                 
-                showToast(`📧 Outlook با ایمیل برای ${user.username} باز شد!`, "success");
+                showToast(`📧 Outlook با ایمیل برای ${userName} باز شد!`, "success");
                 return;
             } catch(e) {
                 console.log('ActiveX failed:', e.message);
@@ -1054,7 +1067,7 @@ ${separator}
             }
         }, 3000);
         
-        // به‌روزرسانی وضعیت
+        // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
         updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
             const localMeeting = meetings.find(m => m.id === meetingId);
             if (localMeeting) {
@@ -1063,14 +1076,13 @@ ${separator}
             renderAll();
         });
         
-        showToast(`📧 ایمیل برای ${user.username} ارسال شد!`, "success");
+        showToast(`📧 ایمیل برای ${userName} ارسال شد!`, "success");
         
     } catch(error) {
         console.error('Error sending email:', error);
         showToast('❌ خطا در ارسال ایمیل: ' + error.message, "error");
     }
-}
-// ========== بارگذاری از Supabase ==========
+}// ========== بارگذاری از Supabase ==========
 async function loadUsers() {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&order=id.desc`, {

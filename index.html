@@ -1004,6 +1004,10 @@ function sendEmailViaOutlook(meetingId) {
     const userEmail = user.email;              // ایمیل شرکت‌کننده (اختیاری)
     
    
+// برای کنترل کامل جهت متن
+const LRE = '\u202A'; // Left-to-Right Embedding
+const PDF = '\u202C'; // Pop Directional Formatting
+
 const emailBody = `با سلام،
 
 صورتجلسه Meeting(${meetingType}) مورخ ${meetingDate} ساعت ${meetingTime} به شرح زیر می‌باشد:
@@ -1013,13 +1017,11 @@ ${separator}
 ${momText}
 ${separator}
 📌 جزئیات جلسه
-<div dir="ltr">
-👤  شرکت‌کننده : ${userName}
-📅  تاریخ: ${meetingDate}
-⏰  زمان: ${meetingTime}
-⏱️  مدت زمان: ${meetingDuration} دقیقه
-🏷️  نوع جلسه : ${meetingType}
-</div>
+${LRE}👤  شرکت‌کننده : ${userName}${PDF}
+${LRE}📅  تاریخ: ${meetingDate}${PDF}
+${LRE}⏰  زمان: ${meetingTime}${PDF}
+${LRE}⏱️  مدت زمان: ${meetingDuration} دقیقه${PDF}
+${LRE}🏷️  نوع جلسه : ${meetingType}${PDF}
 ${separator}
 با احترام
 سیستم مدیریت جلسات`;

@@ -1003,8 +1003,13 @@ function sendEmailViaOutlook(meetingId) {
     const userName = user.username;             // نام شرکت‌کننده
     const userEmail = user.email;              // ایمیل شرکت‌کننده (اختیاری)
     
-    // ساخت کل متن ایمیل با اطلاعات دیتابیس
-    const emailBody = `با سلام،
+   
+// استفاده از RLM (Right-to-Left Mark) برای کنترل جهت متن
+const RLM = '\u200F'; // کاراکتر کنترل راست‌چین
+const LRM = '\u200E'; // کاراکتر کنترل چپ‌چین (اختیاری)
+
+// ساخت کل متن ایمیل با اطلاعات دیتابیس
+const emailBody = `با سلام،
 
 صورتجلسه Meeting(${meetingType}) مورخ ${meetingDate} ساعت ${meetingTime} به شرح زیر می‌باشد:
 
@@ -1013,11 +1018,11 @@ ${separator}
 ${momText}
 ${separator}
 📌 جزئیات جلسه
-👤  شرکت‌کننده : ${userName}
-📅  تاریخ: ${meetingDate}
-⏰  زمان: ${meetingTime}
-⏱️  مدت زمان: ${meetingDuration} دقیقه
-🏷️  نوع جلسه : ${meetingType}
+${RLM}👤  شرکت‌کننده : ${userName}
+${RLM}📅  تاریخ: ${meetingDate}
+${RLM}⏰  زمان: ${meetingTime}
+${RLM}⏱️  مدت زمان: ${meetingDuration} دقیقه
+${RLM}🏷️  نوع جلسه : ${meetingType}
 ${separator}
 با احترام
 سیستم مدیریت جلسات`;

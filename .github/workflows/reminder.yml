@@ -67,10 +67,10 @@ jobs:
                   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
               });
 
-              await transporter.sendMail({
+                           await transporter.sendMail({
                   from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
-                  to: process.env.EMAIL_USER,
-                  to: process.env.RECIPIENT_EMAIL,
+                  // ترکیب دو ایمیل با کاما
+                  to: `${process.env.EMAIL_USER}, ${process.env.RECIPIENT_EMAIL}`,
                   subject: "یادآوری تسک برای فردا",
                   html: htmlBody
               });

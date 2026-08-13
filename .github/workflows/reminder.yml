@@ -14,19 +14,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Nodemailer
-        run: npm install nodemailer
-
       - name: Run Script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
           cat << 'EOF' > check-tasks.js
-          const nodemailer = require("nodemailer");
-
           async function run() {
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
@@ -60,19 +56,31 @@ jobs:
               });
               htmlBody += "</ul><br>سیستم مدیریت جلسات";
 
-              let transporter = nodemailer.createTransport({
-                  service: 'gmail',
-                  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+              // ارسال ایمیل با API سرویس Brevo
+              const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+                  method: 'POST',
+                  headers: {
+                      'api-key': process.env.BREVO_API_KEY,
+                      'Content-Type': 'application/json',
+                      'accept': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      sender: { 
+                          email: process.env.EMAIL_USER, 
+                          name: "Meeting Manager" 
+                      },
+                      to: [{ email: process.env.RECIPIENT_EMAIL }],
+                      subject: "یادآوری تسک برای فردا",
+                      htmlContent: htmlBody
+                  })
               });
 
-              await transporter.sendMail({
-                  from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
-                  to: process.env.EMAIL_USER,
-                  subject: "یادآوری تسک برای فردا",
-                  html: htmlBody
-              });
-
-              console.log("Email sent successfully to: " + process.env.EMAIL_USER);
+              if (brevoResponse.ok) {
+                  console.log("Email sent successfully via Brevo to: " + process.env.RECIPIENT_EMAIL);
+              } else {
+                  const errorData = await brevoResponse.text();
+                  throw new Error("Failed to send email: " + errorData);
+              }
           }
 
           run().catch(e => { console.error(e); process.exit(1); });

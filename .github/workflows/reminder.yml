@@ -24,6 +24,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
           cat << 'EOF' > check-tasks.js
           const nodemailer = require("nodemailer");
@@ -69,6 +70,7 @@ jobs:
               await transporter.sendMail({
                   from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
                   to: process.env.EMAIL_USER,
+                  to: process.env.RECIPIENT_EMAIL,
                   subject: "یادآوری تسک برای فردا",
                   html: htmlBody
               });

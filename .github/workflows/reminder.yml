@@ -2,9 +2,8 @@ name: Daily Task Reminder
 
 on:
   schedule:
-    # این به وقت جهانی (UTC) است. 04:00 UTC معادل 8:30 صبح ایران است.
     - cron: '0 4 * * *'
-  workflow_dispatch: # این خط اجازه میده دکمه تست دستی هم داشته باشید
+  workflow_dispatch:
 
 jobs:
   send-email:
@@ -67,21 +66,14 @@ jobs:
                   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
               });
 
-              // ایجاد یک آرایه از گیرندگان
-              const recipients = [process.env.EMAIL_USER, process.env.RECIPIENT_EMAIL];
-              
-              // ارسال ایمیل به صورت جداگانه برای هر شخص
-              for (const recipient of recipients) {
-                  if (!recipient || recipient === 'undefined') continue; // رد کردن اگر ایملی وجود نداشت
-                  
-                  await transporter.sendMail({
-                      from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
-                      to: recipient,
-                      subject: "یادآوری تسک برای فردا",
-                      html: htmlBody
-                  });
-                  console.log("Email sent successfully to: " + recipient);
-              }
+              await transporter.sendMail({
+                  from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
+                  to: process.env.RECIPIENT_EMAIL,
+                  subject: "یادآوری تسک برای فردا",
+                  html: htmlBody
+              });
+
+              console.log("Email sent successfully to " + process.env.RECIPIENT_EMAIL);
           }
 
           run().catch(e => { console.error(e); process.exit(1); });

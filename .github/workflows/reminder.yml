@@ -67,15 +67,15 @@ jobs:
                   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
               });
 
-                           await transporter.sendMail({
+              await transporter.sendMail({
                   from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
-                  // ترکیب دو ایمیل با کاما
-                  to: `${process.env.EMAIL_USER}, ${process.env.RECIPIENT_EMAIL}`,
+                  // استفاده از آرایه برای ارسال مطمئن به چند گیرنده
+                  to: [process.env.EMAIL_USER, process.env.RECIPIENT_EMAIL],
                   subject: "یادآوری تسک برای فردا",
                   html: htmlBody
               });
 
-              console.log("Email sent successfully!");
+              console.log("Email sent successfully to: " + process.env.EMAIL_USER + " AND " + process.env.RECIPIENT_EMAIL);
           }
 
           run().catch(e => { console.error(e); process.exit(1); });

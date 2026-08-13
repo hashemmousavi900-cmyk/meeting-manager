@@ -1,0 +1,81 @@
+name: Daily Task Reminder
+
+on:
+  schedule:
+    # این به وقت جهانی (UTC) است. 04:00 UTC معادل 8:30 صبح ایران است.
+    - cron: '0 4 * * *'
+  workflow_dispatch: # این خط اجازه میده دکمه تست دستی هم داشته باشید
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Nodemailer
+        run: npm install nodemailer
+
+      - name: Run Script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        run: |
+          cat << 'EOF' > check-tasks.js
+          const nodemailer = require("nodemailer");
+
+          async function run() {
+              const tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+              const url = `${process.env.SUPABASE_URL}/rest/v1/tasks?date=eq.${tomorrowStr}&completed=eq.false`;
+              
+              const response = await fetch(url, {
+                  method: 'GET',
+                  headers: {
+                      'apikey': process.env.SUPABASE_KEY,
+                      'Authorization': `Bearer ${process.env.SUPABASE_KEY}`
+                  }
+              });
+
+              const tasks = await response.json();
+
+              if (!tasks || tasks.length === 0) {
+                  console.log("No tasks for tomorrow.");
+                  return;
+              }
+
+              let htmlBody = "<h3>🔔 یادآوری تسک‌ها و ریمایندرهای فردا</h3><ul>";
+              tasks.forEach(task => {
+                  const icon = task.type === "task" ? "✅" : "⏰";
+                  htmlBody += `<li><b>${icon} ${task.title}</b> (ساعت: ${task.time})`;
+                  if (task.description && task.description !== "No description") {
+                      htmlBody += ` - ${task.description}`;
+                  }
+                  htmlBody += `</li>`;
+              });
+              htmlBody += "</ul><br>سیستم مدیریت جلسات";
+
+              let transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+              });
+
+              await transporter.sendMail({
+                  from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
+                  to: process.env.EMAIL_USER,
+                  subject: "یادآوری تسک برای فردا",
+                  html: htmlBody
+              });
+
+              console.log("Email sent successfully!");
+          }
+
+          run().catch(e => { console.error(e); process.exit(1); });
+          EOF
+          node check-tasks.js

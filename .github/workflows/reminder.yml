@@ -14,14 +14,19 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install Nodemailer
+        run: npm install nodemailer
+
       - name: Run Script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: |
           cat << 'EOF' > check-tasks.js
+          const nodemailer = require("nodemailer");
+
           async function run() {
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
@@ -55,27 +60,19 @@ jobs:
               });
               htmlBody += "</ul><br>سیستم مدیریت جلسات";
 
-              // ارسال ایمیل با استفاده از Resend API
-              const resendResponse = await fetch('https://api.resend.com/emails', {
-                  method: 'POST',
-                  headers: {
-                      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-                      'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                      from: 'Meeting Manager <onboarding@resend.dev>',
-                      to: [process.env.RECIPIENT_EMAIL],
-                      subject: "یادآوری تسک برای فردا",
-                      html: htmlBody
-                  })
+              let transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
               });
 
-              if (resendResponse.ok) {
-                  console.log("Email sent successfully via Resend to: " + process.env.RECIPIENT_EMAIL);
-              } else {
-                  const errorData = await resendResponse.text();
-                  throw new Error("Failed to send email: " + errorData);
-              }
+              await transporter.sendMail({
+                  from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
+                  to: process.env.EMAIL_USER,
+                  subject: "یادآوری تسک برای فردا",
+                  html: htmlBody
+              });
+
+              console.log("Email sent successfully to: " + process.env.EMAIL_USER);
           }
 
           run().catch(e => { console.error(e); process.exit(1); });

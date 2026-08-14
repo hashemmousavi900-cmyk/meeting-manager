@@ -23,6 +23,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
           cat << 'EOF' > check-tasks.js
           const nodemailer = require("nodemailer");
@@ -60,19 +61,25 @@ jobs:
               });
               htmlBody += "</ul><br>سیستم مدیریت جلسات";
 
+              // تنظیمات SMTP برای چاپار میل (یا هر سرویس ایمیل ایرانی دیگر)
               let transporter = nodemailer.createTransport({
-                  service: 'gmail',
-                  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+                  host: 'smtp.chmail.ir', // آدرس سرور SMTP چاپار میل
+                  port: 587,              // پورت استاندارد برای ارسال ایمیل
+                  secure: false,          // false برای پورت 587
+                  auth: { 
+                      user: process.env.EMAIL_USER, 
+                      pass: process.env.EMAIL_PASS 
+                  }
               });
 
               await transporter.sendMail({
                   from: `"Meeting Manager" <${process.env.EMAIL_USER}>`,
-                  to: process.env.EMAIL_USER,
+                  to: process.env.RECIPIENT_EMAIL,
                   subject: "یادآوری تسک برای فردا",
                   html: htmlBody
               });
 
-              console.log("Email sent successfully to: " + process.env.EMAIL_USER);
+              console.log("Email sent successfully to: " + process.env.RECIPIENT_EMAIL);
           }
 
           run().catch(e => { console.error(e); process.exit(1); });

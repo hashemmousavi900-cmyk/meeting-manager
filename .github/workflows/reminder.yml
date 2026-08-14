@@ -1,4 +1,4 @@
-name: Daily Task Reminder (Brevo Test)
+name: Daily Task Reminder (Bale Messenger)
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  send-email:
+  send-bale-message:
     runs-on: ubuntu-latest
     steps:
       - name: Setup Node.js
@@ -18,9 +18,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BALE_TOKEN: ${{ secrets.BALE_TOKEN }}
+          BALE_CHAT_ID: ${{ secrets.BALE_CHAT_ID }}
         run: |
           cat << 'EOF' > check-tasks.js
           async function run() {
@@ -45,41 +44,34 @@ jobs:
                   return;
               }
 
-              let htmlBody = "<h3>🔔 یادآوری تسک‌ها و ریمایندرهای فردا</h3><ul>";
+              let message = "🔔 *یادآوری تسک‌ها و ریمایندرهای فردا*\n\n";
               tasks.forEach(task => {
                   const icon = task.type === "task" ? "✅" : "⏰";
-                  htmlBody += `<li><b>${icon} ${task.title}</b> (ساعت: ${task.time})`;
+                  message += `${icon} *${task.title}* (ساعت: ${task.time})\n`;
                   if (task.description && task.description !== "No description") {
-                      htmlBody += ` - ${task.description}`;
+                      message += `   📝 ${task.description}\n`;
                   }
-                  htmlBody += `</li>`;
               });
-              htmlBody += "</ul><br>سیستم مدیریت جلسات";
+              message += "\nسیستم مدیریت جلسات";
 
-              // ارسال ایمیل با API سرویس Brevo
-              const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+              // ارسال پیام با API بله
+              const baleUrl = `https://tapi.bale.ai/bot${process.env.BALE_TOKEN}/sendMessage`;
+              
+              const baleResponse = await fetch(baleUrl, {
                   method: 'POST',
-                  headers: {
-                      'api-key': process.env.BREVO_API_KEY,
-                      'Content-Type': 'application/json',
-                      'accept': 'application/json'
-                  },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                      sender: { 
-                          email: process.env.EMAIL_USER, 
-                          name: "Meeting Manager" 
-                      },
-                      to: [{ email: process.env.RECIPIENT_EMAIL }],
-                      subject: "یادآوری تسک برای فردا",
-                      htmlContent: htmlBody
+                      chat_id: process.env.BALE_CHAT_ID,
+                      text: message,
+                      parse_mode: "Markdown"
                   })
               });
 
-              if (brevoResponse.ok) {
-                  console.log("Email sent successfully via Brevo to: " + process.env.RECIPIENT_EMAIL);
+              if (baleResponse.ok) {
+                  console.log("Bale message sent successfully!");
               } else {
-                  const errorData = await brevoResponse.text();
-                  throw new Error("Failed to send email: " + errorData);
+                  const errorData = await baleResponse.text();
+                  throw new Error("Failed to send Bale message: " + errorData);
               }
           }
 

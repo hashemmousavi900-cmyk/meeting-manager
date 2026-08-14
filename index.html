@@ -403,6 +403,45 @@
             background: #dbeafe;
             color: #1e40af;
         }
+
+        /* استایل دکمه ارسال خودکار */
+        .auto-email-btn {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 10px;
+            margin: 0 2px;
+            transition: all 0.2s;
+        }
+        .auto-email-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        }
+        .auto-email-btn.sent {
+            background: #10b981;
+        }
+        .auto-email-btn.sent:hover {
+            background: #059669;
+        }
+
+        .reminder-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 8px;
+            font-weight: 600;
+        }
+        .reminder-badge.sent {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .reminder-badge.pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
     </style>
 </head>
 <body>
@@ -585,6 +624,11 @@
             <div id="tasks-tab" class="tab-content hidden space-y-4">
                 <div class="flex justify-between items-center">
                     <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-tasks mr-2 text-emerald-600"></i>Tasks & Reminders</h2>
+                    <div class="flex gap-2">
+                        <button onclick="manualCheckReminders()" class="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs shadow-md hover:bg-purple-600 transition-all">
+                            <i class="fas fa-bell mr-1"></i> بررسی و ارسال یادآوری‌ها
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-4 shadow-md">
@@ -779,6 +823,12 @@
 const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
+// ========== تنظیمات ارسال خودکار ایمیل ==========
+// ⚠️ این آدرس را با آدرس Worker خود جایگزین کنید
+const WORKER_URL = 'https://soft-mud-ca4a.nova-1d059c.workers.dev/';
+// ایمیل گیرنده (ایمیل سازمانی خودتان)
+const ADMIN_EMAIL = 'hashemmousavi900@gmail.com';
+
 let users = [], meetings = [], tasks = [];
 let chart1 = null, chart2 = null;
 let currentEditUserId = null;
@@ -826,6 +876,104 @@ const apiHeaders = {
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json'
 };
+
+// ==========================================
+// 🚀 توابع ارسال خودکار ایمیل از طریق Cloudflare Worker
+// ==========================================
+
+// تابع ارسال ایمیل از طریق Worker
+async function sendReminderViaWorker(task) {
+    try {
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                to_email: ADMIN_EMAIL,
+                to_name: 'مدیر سیستم',
+                task_title: task.title,
+                task_date: task.date,
+                task_time: task.time || 'نامشخص',
+                task_type: task.type,
+                task_description: task.description || 'بدون توضیحات'
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Email sent successfully');
+            return true;
+        } else {
+            console.error('❌ Failed to send email:', result.error);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Network error:', error);
+        return false;
+    }
+}
+
+// بررسی تسک‌های فردا و ارسال ایمیل
+async function checkAndSendReminders() {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    
+    const tasksForTomorrow = tasks.filter(task => 
+        task.date === tomorrowStr && 
+        !task.completed &&
+        !task.reminder_sent
+    );
+    
+    if (tasksForTomorrow.length === 0) {
+        console.log('📭 No tasks for tomorrow');
+        return;
+    }
+    
+    console.log(`📨 Sending ${tasksForTomorrow.length} reminders...`);
+    showToast(`📨 ارسال ${tasksForTomorrow.length} یادآوری...`, 'info');
+    
+    let sentCount = 0;
+    for (const task of tasksForTomorrow) {
+        const success = await sendReminderViaWorker(task);
+        
+        if (success) {
+            task.reminder_sent = true;
+            sentCount++;
+            // ذخیره در Supabase
+            await saveToSupabase('tasks', task);
+        }
+    }
+    
+    saveTasksToStorage();
+    renderTasksAndReminders();
+    
+    if (sentCount > 0) {
+        showToast(`✅ ${sentCount} یادآوری با موفقیت ارسال شد!`, 'success');
+    } else {
+        showToast('❌ ارسال یادآوری‌ها با مشکل مواجه شد!', 'error');
+    }
+}
+
+// دکمه تست دستی
+function manualCheckReminders() {
+    showToast('🔍 در حال بررسی یادآوری‌ها...', 'info');
+    checkAndSendReminders();
+}
+
+// راه‌اندازی تایمر خودکار (هر ۶ ساعت)
+setInterval(async () => {
+    console.log('🔄 Checking for tomorrow\'s reminders...');
+    await checkAndSendReminders();
+}, 6 * 60 * 60 * 1000);
+
+// اجرای اولیه پس از ۵ ثانیه
+setTimeout(async () => {
+    await checkAndSendReminders();
+}, 5000);
 
 // ========== توابع Supabase ==========
 async function saveToSupabase(tableName, data) {
@@ -958,57 +1106,43 @@ async function deleteFromSupabase(tableName, id) {
     }
 }
 
-// ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 ==========
-// ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 (بدون باز شدن تب جدید) ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت یکسان ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت ساده ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت جدید ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت جدید (اطلاعات از دیتابیس) ==========
+// ========== 📧 ارسال ایمیل از Outlook ==========
 function sendEmailViaOutlook(meetingId) {
-    // 1️⃣ گرفتن اطلاعات جلسه از دیتابیس
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) {
         showToast("جلسه یافت نشد!", "error");
         return;
     }
     
-    // 2️⃣ گرفتن اطلاعات کاربر از دیتابیس
     const user = users.find(u => u.id === meeting.userId);
     if (!user) {
         showToast("کاربر یافت نشد!", "error");
         return;
     }
     
-    // 3️⃣ بررسی وجود ایمیل کاربر
     if (!user.email || user.email === '') {
         showToast("کاربر ایمیل ندارد! لطفاً ابتدا ایمیل کاربر را ثبت کنید.", "error");
         return;
     }
     
-    // 4️⃣ بررسی وجود MOM
     if (!meeting.mom || meeting.mom.trim() === '' || meeting.mom === 'No MOM') {
         showToast("ابتدا MOM را ثبت کنید!", "error");
         return;
     }
     
-    // ========== ساخت متن ایمیل با اطلاعات دیتابیس ==========
     const momText = meeting.mom.trim();
     const separator = '|══════════════════════════════════|';
+    const meetingType = meeting.type;
+    const meetingDate = meeting.date;
+    const meetingTime = meeting.time;
+    const meetingDuration = meeting.duration;
+    const userName = user.username;
+    const userEmail = user.email;
     
-    // دریافت اطلاعات از دیتابیس
-    const meetingType = meeting.type;           // نوع جلسه
-    const meetingDate = meeting.date;           // تاریخ جلسه
-    const meetingTime = meeting.time;           // ساعت جلسه
-    const meetingDuration = meeting.duration;   // مدت زمان جلسه
-    const userName = user.username;             // نام شرکت‌کننده
-    const userEmail = user.email;              // ایمیل شرکت‌کننده (اختیاری)
+    const LRE = '\u202A';
+    const PDF = '\u202C';
     
-   
-// برای کنترل کامل جهت متن
-const LRE = '\u202A'; // Left-to-Right Embedding
-const PDF = '\u202C'; // Pop Directional Formatting
-
-const emailBody = `با سلام،
+    const emailBody = `با سلام،
 
 صورتجلسه Meeting(${meetingType}) مورخ ${meetingDate} ساعت ${meetingTime} به شرح زیر می‌باشد:
 
@@ -1026,12 +1160,9 @@ ${separator}
 با احترام
 سیستم مدیریت جلسات`;
     
-    // ساخت موضوع با اطلاعات دیتابیس
     const subject = `صورتجلسه جلسه ${meetingType} - ${meetingDate}`;
     
-    // ========== ارسال ایمیل ==========
     try {
-        // روش اول: استفاده از ActiveX (IE و Edge Legacy)
         if (window.ActiveXObject) {
             try {
                 var outlookApp = new ActiveXObject("Outlook.Application");
@@ -1041,7 +1172,6 @@ ${separator}
                 mailItem.Body = emailBody;
                 mailItem.Display();
                 
-                // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
                 updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
                     const localMeeting = meetings.find(m => m.id === meetingId);
                     if (localMeeting) {
@@ -1057,7 +1187,6 @@ ${separator}
             }
         }
         
-        // روش دوم: استفاده از mailto با iframe
         const mailtoLink = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
         
         const iframe = document.createElement('iframe');
@@ -1071,7 +1200,6 @@ ${separator}
             }
         }, 3000);
         
-        // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
         updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
             const localMeeting = meetings.find(m => m.id === meetingId);
             if (localMeeting) {
@@ -1086,7 +1214,9 @@ ${separator}
         console.error('Error sending email:', error);
         showToast('❌ خطا در ارسال ایمیل: ' + error.message, "error");
     }
-}// ========== بارگذاری از Supabase ==========
+}
+
+// ========== بارگذاری از Supabase ==========
 async function loadUsers() {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&order=id.desc`, {
@@ -1188,8 +1318,8 @@ async function loadTasks() {
     if (tasks.length === 0) {
         let today = new Date().toISOString().slice(0,10);
         tasks = [
-            { id: 1, type: "task", title: "Review reports", date: today, time: "14:00", priority: "high", completed: false },
-            { id: 2, type: "reminder", title: "Team meeting", date: today, time: "09:30", description: "Prepare slides", completed: false }
+            { id: 1, type: "task", title: "Review reports", date: today, time: "14:00", priority: "high", completed: false, reminder_sent: false },
+            { id: 2, type: "reminder", title: "Team meeting", date: today, time: "09:30", description: "Prepare slides", completed: false, reminder_sent: false }
         ];
         saveTasksToStorage();
     }
@@ -1338,6 +1468,9 @@ function renderTasksAndReminders() {
     document.getElementById("reminderCount") && (document.getElementById("reminderCount").innerText = remindersList.length);
     
     let today = new Date().toISOString().slice(0,10);
+    let tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    let tomorrowStr = tomorrow.toISOString().slice(0,10);
     
     if(tasksList.length === 0) {
         tasksContainer.innerHTML = "<div class='text-center text-gray-400 py-3 text-xs'>No tasks</div>";
@@ -1345,15 +1478,24 @@ function renderTasksAndReminders() {
         let tasksHtml = '';
         for(let t of tasksList) {
             let isToday = t.date === today;
+            let isTomorrow = t.date === tomorrowStr;
+            let reminderStatus = t.reminder_sent ? 'sent' : 'pending';
+            let reminderLabel = t.reminder_sent ? '✅ ارسال شد' : '⏳ در انتظار';
+            
             tasksHtml += `
                 <div class="task-item text-sm p-2 ${t.completed ? 'bg-gray-100' : ''}">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <div class="font-medium text-gray-800 text-xs">✅ ${escapeHtml(t.title)} ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}</div>
+                            <div class="font-medium text-gray-800 text-xs">✅ ${escapeHtml(t.title)} 
+                                ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}
+                                ${isTomorrow ? '<span class="ml-1 text-purple-500 text-[10px]"><i class="fas fa-clock"></i></span>' : ''}
+                                <span class="reminder-badge ${reminderStatus} ml-1">${reminderLabel}</span>
+                            </div>
                             <div class="text-[10px] text-gray-500 mt-0.5">${t.date} ${t.time} • ${t.priority === 'high' ? '🔴 High' : (t.priority === 'medium' ? '🟡 Medium' : '🟢 Low')}</div>
                         </div>
                         <div class="flex gap-1">
                             ${!t.completed ? `<button onclick="markTaskComplete(${t.id})" class="text-green-500 text-xs"><i class="fas fa-check-circle"></i></button>` : ''}
+                            ${!t.reminder_sent ? `<button onclick="sendSingleReminder(${t.id})" class="auto-email-btn text-xs" title="ارسال یادآوری"><i class="fas fa-envelope"></i></button>` : ''}
                             <button onclick="deleteTask(${t.id})" class="text-red-400 text-xs"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     </div>
@@ -1369,16 +1511,25 @@ function renderTasksAndReminders() {
         let remindersHtml = '';
         for(let r of remindersList) {
             let isToday = r.date === today;
+            let isTomorrow = r.date === tomorrowStr;
+            let reminderStatus = r.reminder_sent ? 'sent' : 'pending';
+            let reminderLabel = r.reminder_sent ? '✅ ارسال شد' : '⏳ در انتظار';
+            
             remindersHtml += `
                 <div class="reminder-item text-sm p-2 ${r.completed ? 'bg-gray-100' : ''}">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <div class="font-medium text-gray-800 text-xs">⏰ ${escapeHtml(r.title)} ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}</div>
+                            <div class="font-medium text-gray-800 text-xs">⏰ ${escapeHtml(r.title)} 
+                                ${isToday ? '<span class="ml-1 text-red-500 text-[10px]"><i class="fas fa-bell"></i></span>' : ''}
+                                ${isTomorrow ? '<span class="ml-1 text-purple-500 text-[10px]"><i class="fas fa-clock"></i></span>' : ''}
+                                <span class="reminder-badge ${reminderStatus} ml-1">${reminderLabel}</span>
+                            </div>
                             <div class="text-[10px] text-gray-500 mt-0.5">${r.date} ${r.time}</div>
                             <div class="text-[10px] text-gray-600 mt-0.5">📝 ${escapeHtml(r.description || '')}</div>
                         </div>
                         <div class="flex gap-1">
                             ${!r.completed ? `<button onclick="markTaskComplete(${r.id})" class="text-green-500 text-xs"><i class="fas fa-check-circle"></i></button>` : ''}
+                            ${!r.reminder_sent ? `<button onclick="sendSingleReminder(${r.id})" class="auto-email-btn text-xs" title="ارسال یادآوری"><i class="fas fa-envelope"></i></button>` : ''}
                             <button onclick="deleteTask(${r.id})" class="text-red-400 text-xs"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     </div>
@@ -1386,6 +1537,34 @@ function renderTasksAndReminders() {
             `;
         }
         remindersContainer.innerHTML = remindersHtml;
+    }
+}
+
+// ارسال یادآوری برای یک آیتم خاص
+async function sendSingleReminder(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) {
+        showToast("آیتم یافت نشد!", "error");
+        return;
+    }
+    
+    if (task.reminder_sent) {
+        showToast("این یادآوری قبلاً ارسال شده است!", "info");
+        return;
+    }
+    
+    showToast(`📨 در حال ارسال یادآوری برای "${task.title}"...`, 'info');
+    
+    const success = await sendReminderViaWorker(task);
+    
+    if (success) {
+        task.reminder_sent = true;
+        await saveToSupabase('tasks', task);
+        saveTasksToStorage();
+        renderTasksAndReminders();
+        showToast(`✅ یادآوری "${task.title}" با موفقیت ارسال شد!`, 'success');
+    } else {
+        showToast(`❌ ارسال یادآوری "${task.title}" با مشکل مواجه شد!`, 'error');
     }
 }
 
@@ -1586,10 +1765,28 @@ async function addTaskOrReminder() {
     let newItem;
     if(type === "task") {
         let priority = document.getElementById("taskPriority").value;
-        newItem = { id: Date.now(), type: "task", title: title, date: date, time: time, priority: priority, completed: false };
+        newItem = { 
+            id: Date.now(), 
+            type: "task", 
+            title: title, 
+            date: date, 
+            time: time, 
+            priority: priority, 
+            completed: false,
+            reminder_sent: false
+        };
     } else {
         let description = document.getElementById("reminderDesc").value.trim() || "No description";
-        newItem = { id: Date.now(), type: "reminder", title: title, date: date, time: time, description: description, completed: false };
+        newItem = { 
+            id: Date.now(), 
+            type: "reminder", 
+            title: title, 
+            date: date, 
+            time: time, 
+            description: description, 
+            completed: false,
+            reminder_sent: false
+        };
     }
     
     const success = await saveToSupabase('tasks', newItem);
@@ -2182,7 +2379,7 @@ function exportUsersReport() {
 }
 
 function exportTasksReport() {
-    let report = tasks.map(t => ({ Type: t.type, Title: t.title, Date: t.date, Time: t.time, Completed: t.completed }));
+    let report = tasks.map(t => ({ Type: t.type, Title: t.title, Date: t.date, Time: t.time, Completed: t.completed, ReminderSent: t.reminder_sent || false }));
     downloadFile(JSON.stringify(report, null, 2), `tasks_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Tasks exported");
 }
@@ -2198,7 +2395,8 @@ function exportFullReport() {
             totalTasks: tasks.length, 
             meetingTypes: typeCount,
             meetingsWithMOM: meetings.filter(m => m.mom && m.mom.trim() !== '' && m.mom !== 'No MOM').length,
-            emailsSent: meetings.filter(m => m.emailSent).length
+            emailsSent: meetings.filter(m => m.emailSent).length,
+            remindersSent: tasks.filter(t => t.reminder_sent).length
         }, 
         users: users, 
         meetings: meetings, 
@@ -2216,7 +2414,9 @@ function exportStatistics() {
         avgDuration: meetings.length ? Math.round(meetings.reduce((a,b) => a + b.duration, 0) / meetings.length) : 0,
         completedTasks: tasks.filter(t => t.completed).length,
         meetingsWithMOM: meetings.filter(m => m.mom && m.mom.trim() !== '' && m.mom !== 'No MOM').length,
-        emailsSent: meetings.filter(m => m.emailSent).length
+        emailsSent: meetings.filter(m => m.emailSent).length,
+        remindersSent: tasks.filter(t => t.reminder_sent).length,
+        pendingReminders: tasks.filter(t => !t.reminder_sent && !t.completed).length
     };
     downloadFile(JSON.stringify(stats, null, 2), `stats_${new Date().toISOString().slice(0,19)}.json`);
     showToast("Statistics exported");
@@ -2248,6 +2448,7 @@ function importJSON(input) {
             }
             if(imported.tasks) {
                 for(let t of imported.tasks) {
+                    if (!t.reminder_sent) t.reminder_sent = false;
                     await saveToSupabase('tasks', t);
                 }
             }

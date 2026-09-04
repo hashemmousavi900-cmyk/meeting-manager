@@ -2232,7 +2232,7 @@ function updateEmployeeChart() {
     };
     
     // رنگ‌های پیش‌فرض برای نوع‌های جلسات جدید که در colorMap نباشند
-    const defaultColors = [
+   const defaultColors = [
         '#96CEB4', '#DDA0DD', '#FD79A8', '#00B894', 
         '#74B9FF', '#6C5CE7', '#00CEC9', '#E84393'
     ];
@@ -2278,7 +2278,6 @@ function updateEmployeeChart() {
     // ساخت دیتاست‌ها برای هر نوع جلسه (هر نوع یک رنگ متفاوت)
     const datasets = meetingTypes.map((type, index) => {
         const data = activeUsers.map(userId => userMeetingData[userId].types[type] || 0);
-        // استفاده از رنگ از colorMap یا defaultColors
         const color = colorMap[type] || defaultColors[index % defaultColors.length];
         return {
             label: type,
@@ -2350,26 +2349,59 @@ function updateEmployeeChart() {
             afterDraw: function(chart) {
                 const ctx = chart.ctx;
                 const datasets = chart.data.datasets;
-                const meta = chart.getDatasetMeta(0);
+                const chartArea = chart.chartArea;
                 
-                if (!meta.data || meta.data.length === 0) return;
+                if (!chartArea) return;
                 
                 // برای هر میله (هر کاربر)
-                for (let i = 0; i < meta.data.length; i++) {
+                for (let i = 0; i < chart.data.labels.length; i++) {
                     let total = 0;
                     for (let d = 0; d < datasets.length; d++) {
                         total += datasets[d].data[i] || 0;
                     }
                     
                     if (total > 0) {
-                        const bar = meta.data[i];
+                        // محاسبه موقعیت Y برای بالای میله
+                        // از متادیتای آخرین دیتاست (که روی هم انباشته شده) استفاده می‌کنیم
+                        let maxY = chartArea.top;
+                        let foundY = null;
+                        
+                        for (let d = datasets.length - 1; d >= 0; d--) {
+                            const meta = chart.getDatasetMeta(d);
+                            if (meta.data && meta.data[i]) {
+                                const bar = meta.data[i];
+                                if (bar.y !== undefined && bar.y !== null) {
+                                    foundY = bar.y;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // اگر پیدا نشد، از محاسبه دستی استفاده کن
+                        if (foundY === null) {
+                            const yScale = chart.scales.y;
+                            const yValue = yScale.getPixelForValue(total);
+                            foundY = yValue;
+                        }
+                        
+                        // اطمینان از اینکه عدد از چارت خارج نشود
+                        const yPos = Math.max(foundY - 10, chartArea.top + 5);
+                        
                         ctx.save();
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
                         ctx.font = 'bold 13px Poppins';
                         ctx.fillStyle = '#0f172a';
-                        // نمایش مجموع کل جلسات بالای هر میله (با فاصله 6px از بالا)
-                        ctx.fillText(total, bar.x, bar.y - 6);
+                        ctx.shadowColor = 'rgba(255,255,255,0.8)';
+                        ctx.shadowBlur = 4;
+                        
+                        // موقعیت X: وسط میله
+                        const meta = chart.getDatasetMeta(0);
+                        if (meta.data && meta.data[i]) {
+                            const bar = meta.data[i];
+                            ctx.fillText(total, bar.x, yPos);
+                        }
+                        
                         ctx.restore();
                     }
                 }
@@ -2377,10 +2409,9 @@ function updateEmployeeChart() {
         }]
     });
     
-    // لیست زیر نمودار را خالی می‌کنیم (چون دیگر نیازی نیست)
+    // لیست زیر نمودار را خالی می‌کنیم
     document.getElementById('employeeChartLegend').innerHTML = '';
 }
-
 // ========== مدیریت تب‌های Reports ==========
 document.addEventListener('DOMContentLoaded', function() {
     // مدیریت تب‌های Reports

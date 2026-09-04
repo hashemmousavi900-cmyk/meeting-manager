@@ -2211,6 +2211,7 @@ function updateDashboardAndCharts() {
 
 // ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع (انباشته) ==========
 // ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع (انباشته) ==========
+// ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع (انباشته) ==========
 function updateEmployeeChart() {
     const ctx = document.getElementById('employeeChart')?.getContext('2d');
     if (!ctx) return;
@@ -2218,24 +2219,22 @@ function updateEmployeeChart() {
     // گرفتن همه نوع‌های جلسات
     const meetingTypes = [...new Set(meetings.map(m => m.type))];
     
-    // ========== رنگ‌بندی جدید با رنگ‌های متنوع ==========
-    const colorPalette = [
-        '#FF6B6B', // قرمز
-        '#4ECDC4', // فیروزه‌ای
-        '#45B7D1', // آبی آسمانی
-        '#96CEB4', // سبز ملایم
-        '#FFEAA7', // زرد
-        '#DDA0DD', // بنفش روشن (Plum)
-        '#FF8A5C', // نارنجی
-        '#A29BFE', // بنفش آبی
-        '#FD79A8', // صورتی
-        '#00B894', // سبز زمردی
-        '#E17055', // قرمز مایل به نارنجی
-        '#74B9FF', // آبی روشن
-        '#FDCB6E', // زرد کهربایی
-        '#6C5CE7', // بنفش
-        '#00CEC9', // فیروزه‌ای تیره
-        '#E84393'  // صورتی تیره
+    // ========== رنگ‌بندی با رنگ‌های متنوع ==========
+    // ایندکس‌ها بر اساس ترتیب alphabetically یا ترتیب ظاهر شدن تنظیم شده‌اند
+    const colorMap = {
+        'Individual': '#FF6B6B',      // قرمز
+        'Team': '#4ECDC4',            // فیروزه‌ای
+        'Disciplinary': '#FF8A5C',    // نارنجی (قبلاً One on One بود)
+        'CLF': '#45B7D1',             // آبی آسمانی
+        'Project Review': '#A29BFE',  // بنفش آبی
+        'Strategic': '#FDCB6E',       // زرد کهربایی
+        'One on One': '#E17055'       // قرمز مایل به نارنجی (قبلاً Disciplinary بود)
+    };
+    
+    // رنگ‌های پیش‌فرض برای نوع‌های جلسات جدید که در colorMap نباشند
+    const defaultColors = [
+        '#96CEB4', '#DDA0DD', '#FD79A8', '#00B894', 
+        '#74B9FF', '#6C5CE7', '#00CEC9', '#E84393'
     ];
     
     // گروه‌بندی جلسات بر اساس کاربر و نوع
@@ -2265,7 +2264,7 @@ function updateEmployeeChart() {
     
     if (activeUsers.length === 0) {
         if (chart3) { chart3.destroy(); chart3 = null; }
-        document.getElementById('employeeChartLegend').innerHTML = '<span class="text-gray-400 text-xs">هیچ جلسه‌ای برای نمایش وجود ندارد</span>';
+        document.getElementById('employeeChartLegend').innerHTML = '';
         return;
     }
     
@@ -2279,11 +2278,13 @@ function updateEmployeeChart() {
     // ساخت دیتاست‌ها برای هر نوع جلسه (هر نوع یک رنگ متفاوت)
     const datasets = meetingTypes.map((type, index) => {
         const data = activeUsers.map(userId => userMeetingData[userId].types[type] || 0);
+        // استفاده از رنگ از colorMap یا defaultColors
+        const color = colorMap[type] || defaultColors[index % defaultColors.length];
         return {
             label: type,
             data: data,
-            backgroundColor: colorPalette[index % colorPalette.length],
-            borderColor: colorPalette[index % colorPalette.length],
+            backgroundColor: color,
+            borderColor: color,
             borderWidth: 1,
             borderRadius: 3,
         };
@@ -2328,7 +2329,10 @@ function updateEmployeeChart() {
                 x: {
                     stacked: true,
                     grid: { display: false },
-                    ticks: { font: { size: 11, family: 'Poppins' } }
+                    ticks: { 
+                        font: { size: 11, family: 'Poppins', weight: '600' },
+                        color: '#1e293b'
+                    }
                 },
                 y: {
                     stacked: true,
@@ -2362,9 +2366,9 @@ function updateEmployeeChart() {
                         ctx.save();
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
-                        ctx.font = 'bold 12px Poppins';
-                        ctx.fillStyle = '#1e293b';
-                        // نمایش مجموع کل جلسات بالای هر میله
+                        ctx.font = 'bold 13px Poppins';
+                        ctx.fillStyle = '#0f172a';
+                        // نمایش مجموع کل جلسات بالای هر میله (با فاصله 6px از بالا)
                         ctx.fillText(total, bar.x, bar.y - 6);
                         ctx.restore();
                     }
@@ -2373,20 +2377,8 @@ function updateEmployeeChart() {
         }]
     });
     
-    // ساخت Legend سفارشی برای نمایش تعداد کل جلسات هر کاربر
-    let legendHtml = '';
-    activeUsers.forEach((userId, index) => {
-        const user = users.find(u => u.id == userId);
-        if (user) {
-            const total = Object.values(userMeetingData[userId].types).reduce((a, b) => a + b, 0);
-            const color = colorPalette[index % colorPalette.length];
-            legendHtml += `<span class="inline-flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-full text-xs border border-gray-200">
-                <span class="w-2.5 h-2.5 rounded-full" style="background:${color}"></span>
-                ${escapeHtml(user.username)}: <strong>${total}</strong> جلسه
-            </span>`;
-        }
-    });
-    document.getElementById('employeeChartLegend').innerHTML = legendHtml || '<span class="text-gray-400 text-xs">هیچ داده‌ای موجود نیست</span>';
+    // لیست زیر نمودار را خالی می‌کنیم (چون دیگر نیازی نیست)
+    document.getElementById('employeeChartLegend').innerHTML = '';
 }
 
 // ========== مدیریت تب‌های Reports ==========

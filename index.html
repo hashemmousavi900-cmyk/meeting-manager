@@ -407,7 +407,42 @@
             color: #1e40af;
         }
         
-        /* استایل‌های نمودار میله‌ای جدید */
+        /* استایل تب‌های Reports */
+        .reports-tabs {
+            display: flex;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .reports-tab-btn {
+            padding: 8px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            color: #64748b;
+        }
+        .reports-tab-btn:hover {
+            background: rgba(255,255,255,0.5);
+            color: #1e293b;
+        }
+        .reports-tab-btn.active {
+            background: white;
+            color: #059669;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .reports-tab-content {
+            display: block;
+        }
+        .reports-tab-content.hidden {
+            display: none !important;
+        }
+        
         .employee-chart-container {
             background: white;
             border-radius: 16px;
@@ -420,7 +455,6 @@
             font-size: 14px;
         }
         
-        /* لیبل‌های سفارشی روی میله‌ها */
         .chart-label-custom {
             font-weight: 600;
             font-size: 11px;
@@ -694,25 +728,37 @@
 
             <!-- REPORTS -->
             <div id="reports-tab" class="tab-content hidden space-y-4">
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
-                    <h2 class="text-lg font-bold mb-3 text-gray-800"><i class="fas fa-chart-pie mr-2 text-emerald-600"></i>Meeting Distribution</h2>
-                    <div class="chart-container"><canvas id="reportChart" height="180"></canvas></div>
+                <!-- تب‌های Reports -->
+                <div class="reports-tabs" id="reportsTabs">
+                    <button class="reports-tab-btn active" data-report-tab="distribution">📊 Meeting Distribution</button>
+                    <button class="reports-tab-btn" data-report-tab="employee">👥 Employee Report</button>
                 </div>
 
-                <!-- نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع -->
-                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md employee-chart-container">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-bold text-gray-800 text-md"><i class="fas fa-users mr-2 text-blue-600"></i>📊 تعداد جلسات کارمندان (تفکیک نوع)</h3>
-                        <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">نمودار میله‌ای</span>
-                    </div>
-                    <div class="chart-container-large" style="max-height: 320px;">
-                        <canvas id="employeeChart"></canvas>
-                    </div>
-                    <div class="mt-3 text-xs text-gray-500 flex flex-wrap gap-4 justify-center" id="employeeChartLegend">
-                        <!-- Legend dynamically generated -->
+                <!-- تب Meeting Distribution -->
+                <div id="report-distribution" class="reports-tab-content">
+                    <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
+                        <h2 class="text-lg font-bold mb-3 text-gray-800"><i class="fas fa-chart-pie mr-2 text-emerald-600"></i>Meeting Distribution</h2>
+                        <div class="chart-container"><canvas id="reportChart" height="180"></canvas></div>
                     </div>
                 </div>
-                
+
+                <!-- تب Employee Report -->
+                <div id="report-employee" class="reports-tab-content hidden">
+                    <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md employee-chart-container">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-gray-800 text-md"><i class="fas fa-users mr-2 text-blue-600"></i>📊 تعداد جلسات کارمندان (تفکیک نوع)</h3>
+                            <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">نمودار میله‌ای انباشته</span>
+                        </div>
+                        <div class="chart-container-large" style="max-height: 320px;">
+                            <canvas id="employeeChart"></canvas>
+                        </div>
+                        <div class="mt-3 text-xs text-gray-500 flex flex-wrap gap-4 justify-center" id="employeeChartLegend">
+                            <!-- Legend dynamically generated -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- بخش Export Reports (مشترک هر دو تب) -->
                 <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
                     <h3 class="font-bold mb-2 text-gray-800 text-md"><i class="fas fa-download mr-2 text-emerald-600"></i> Export Reports</h3>
                     <div class="export-buttons flex gap-2 flex-wrap">
@@ -2163,14 +2209,14 @@ function updateDashboardAndCharts() {
     document.getElementById("recentLogs") && (document.getElementById("recentLogs").innerHTML = recentHtml || "<div class='text-gray-400 text-xs'>No recent meetings</div>");
 }
 
-// ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع ==========
+// ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع (انباشته) ==========
 function updateEmployeeChart() {
     const ctx = document.getElementById('employeeChart')?.getContext('2d');
     if (!ctx) return;
     
-    // ایجاد داده‌ها: هر کاربر به عنوان یک مجموعه داده مجزا
+    // گرفتن همه نوع‌های جلسات
     const meetingTypes = [...new Set(meetings.map(m => m.type))];
-    const colors = ['#10b981', '#34d399', '#6ee7b7', '#059669', '#3b82f6', '#60a5fa', '#93c5fd', '#8b5cf6', '#a78bfa', '#c4b5fd'];
+    const colorPalette = ['#10b981', '#34d399', '#6ee7b7', '#059669', '#3b82f6', '#60a5fa', '#93c5fd', '#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#fbbf24'];
     
     // گروه‌بندی جلسات بر اساس کاربر و نوع
     const userMeetingData = {};
@@ -2192,17 +2238,23 @@ function updateEmployeeChart() {
         }
     });
     
-    // کاربران دارای جلسه را فیلتر کنید
+    // کاربران دارای جلسه را فیلتر کنید (فقط کاربرانی که حداقل یک جلسه دارند)
     const activeUsers = Object.keys(userMeetingData).filter(userId => {
         return Object.values(userMeetingData[userId].types).some(count => count > 0);
     });
     
     if (activeUsers.length === 0) {
-        // اگر هیچ جلسه‌ای وجود ندارد، پیام نمایش دهید
         if (chart3) { chart3.destroy(); chart3 = null; }
         document.getElementById('employeeChartLegend').innerHTML = '<span class="text-gray-400 text-xs">هیچ جلسه‌ای برای نمایش وجود ندارد</span>';
         return;
     }
+    
+    // مرتب‌سازی کاربران بر اساس تعداد کل جلسات (نزولی)
+    activeUsers.sort((a, b) => {
+        const totalA = Object.values(userMeetingData[a].types).reduce((sum, v) => sum + v, 0);
+        const totalB = Object.values(userMeetingData[b].types).reduce((sum, v) => sum + v, 0);
+        return totalB - totalA;
+    });
     
     // ساخت دیتاست‌ها برای هر نوع جلسه (هر نوع یک رنگ)
     const datasets = meetingTypes.map((type, index) => {
@@ -2210,12 +2262,10 @@ function updateEmployeeChart() {
         return {
             label: type,
             data: data,
-            backgroundColor: colors[index % colors.length],
-            borderColor: colors[index % colors.length],
+            backgroundColor: colorPalette[index % colorPalette.length],
+            borderColor: colorPalette[index % colorPalette.length],
             borderWidth: 1,
-            borderRadius: 4,
-            barPercentage: 0.8,
-            categoryPercentage: 0.7
+            borderRadius: 3,
         };
     });
     
@@ -2223,7 +2273,7 @@ function updateEmployeeChart() {
     
     if (chart3) { chart3.destroy(); chart3 = null; }
     
-    // ایجاد نمودار میله‌ای گروهی
+    // ایجاد نمودار میله‌ای انباشته (Stacked)
     chart3 = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -2256,10 +2306,12 @@ function updateEmployeeChart() {
             },
             scales: {
                 x: {
+                    stacked: true,
                     grid: { display: false },
                     ticks: { font: { size: 11, family: 'Poppins' } }
                 },
                 y: {
+                    stacked: true,
                     beginAtZero: true,
                     ticks: { 
                         stepSize: 1,
@@ -2273,39 +2325,82 @@ function updateEmployeeChart() {
             id: 'customLabels',
             afterDraw: function(chart) {
                 const ctx = chart.ctx;
-                chart.data.datasets.forEach((dataset, i) => {
-                    const meta = chart.getDatasetMeta(i);
-                    meta.data.forEach((bar, index) => {
-                        const value = dataset.data[index];
-                        if (value > 0) {
-                            ctx.save();
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            ctx.font = 'bold 11px Poppins';
-                            ctx.fillStyle = '#1e293b';
-                            ctx.fillText(value, bar.x, bar.y - 4);
-                            ctx.restore();
-                        }
-                    });
-                });
+                const datasets = chart.data.datasets;
+                const meta = chart.getDatasetMeta(0);
+                
+                if (!meta.data || meta.data.length === 0) return;
+                
+                // برای هر میله (هر کاربر)
+                for (let i = 0; i < meta.data.length; i++) {
+                    let total = 0;
+                    for (let d = 0; d < datasets.length; d++) {
+                        total += datasets[d].data[i] || 0;
+                    }
+                    
+                    if (total > 0) {
+                        const bar = meta.data[i];
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.font = 'bold 12px Poppins';
+                        ctx.fillStyle = '#1e293b';
+                        // نمایش مجموع کل جلسات بالای هر میله
+                        ctx.fillText(total, bar.x, bar.y - 6);
+                        ctx.restore();
+                    }
+                }
             }
         }]
     });
     
     // ساخت Legend سفارشی برای نمایش تعداد کل جلسات هر کاربر
     let legendHtml = '';
-    activeUsers.forEach(userId => {
+    activeUsers.forEach((userId, index) => {
         const user = users.find(u => u.id == userId);
         if (user) {
             const total = Object.values(userMeetingData[userId].types).reduce((a, b) => a + b, 0);
-            legendHtml += `<span class="inline-flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full text-xs">
-                <span class="w-2 h-2 rounded-full" style="background:${colors[activeUsers.indexOf(userId) % colors.length]}"></span>
-                ${escapeHtml(user.username)}: ${total} جلسه
+            const color = colorPalette[index % colorPalette.length];
+            legendHtml += `<span class="inline-flex items-center gap-1.5 bg-gray-50 px-3 py-1 rounded-full text-xs border border-gray-200">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:${color}"></span>
+                ${escapeHtml(user.username)}: <strong>${total}</strong> جلسه
             </span>`;
         }
     });
-    document.getElementById('employeeChartLegend').innerHTML = legendHtml;
+    document.getElementById('employeeChartLegend').innerHTML = legendHtml || '<span class="text-gray-400 text-xs">هیچ داده‌ای موجود نیست</span>';
 }
+
+// ========== مدیریت تب‌های Reports ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // مدیریت تب‌های Reports
+    document.querySelectorAll('.reports-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // حذف کلاس active از همه دکمه‌ها
+            document.querySelectorAll('.reports-tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // مخفی کردن همه محتوای تب‌ها
+            document.querySelectorAll('.reports-tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // نمایش تب مربوطه
+            const tabName = this.dataset.reportTab;
+            const targetContent = document.getElementById(`report-${tabName}`);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+            }
+            
+            // آپدیت نمودارها
+            setTimeout(() => {
+                if (tabName === 'employee') {
+                    updateEmployeeChart();
+                } else if (tabName === 'distribution') {
+                    updateDashboardAndCharts();
+                }
+            }, 100);
+        });
+    });
+});
 
 function toggleTaskReminderFields() {
     let type = document.getElementById("itemType").value;

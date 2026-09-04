@@ -2210,13 +2210,33 @@ function updateDashboardAndCharts() {
 }
 
 // ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع (انباشته) ==========
+// ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع (انباشته) ==========
 function updateEmployeeChart() {
     const ctx = document.getElementById('employeeChart')?.getContext('2d');
     if (!ctx) return;
     
     // گرفتن همه نوع‌های جلسات
     const meetingTypes = [...new Set(meetings.map(m => m.type))];
-    const colorPalette = ['#10b981', '#34d399', '#6ee7b7', '#059669', '#3b82f6', '#60a5fa', '#93c5fd', '#8b5cf6', '#a78bfa', '#c4b5fd', '#f59e0b', '#fbbf24'];
+    
+    // ========== رنگ‌بندی جدید با رنگ‌های متنوع ==========
+    const colorPalette = [
+        '#FF6B6B', // قرمز
+        '#4ECDC4', // فیروزه‌ای
+        '#45B7D1', // آبی آسمانی
+        '#96CEB4', // سبز ملایم
+        '#FFEAA7', // زرد
+        '#DDA0DD', // بنفش روشن (Plum)
+        '#FF8A5C', // نارنجی
+        '#A29BFE', // بنفش آبی
+        '#FD79A8', // صورتی
+        '#00B894', // سبز زمردی
+        '#E17055', // قرمز مایل به نارنجی
+        '#74B9FF', // آبی روشن
+        '#FDCB6E', // زرد کهربایی
+        '#6C5CE7', // بنفش
+        '#00CEC9', // فیروزه‌ای تیره
+        '#E84393'  // صورتی تیره
+    ];
     
     // گروه‌بندی جلسات بر اساس کاربر و نوع
     const userMeetingData = {};
@@ -2256,7 +2276,7 @@ function updateEmployeeChart() {
         return totalB - totalA;
     });
     
-    // ساخت دیتاست‌ها برای هر نوع جلسه (هر نوع یک رنگ)
+    // ساخت دیتاست‌ها برای هر نوع جلسه (هر نوع یک رنگ متفاوت)
     const datasets = meetingTypes.map((type, index) => {
         const data = activeUsers.map(userId => userMeetingData[userId].types[type] || 0);
         return {

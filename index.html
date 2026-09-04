@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
         * { font-family: 'Poppins', sans-serif; }
@@ -92,7 +93,9 @@
         }
         
         .chart-container { max-height: 220px; position: relative; }
+        .chart-container-large { max-height: 350px; position: relative; }
         canvas { max-height: 200px; width: 100% !important; }
+        .chart-container-large canvas { max-height: 300px; }
         
         .form-row {
             display: flex;
@@ -403,6 +406,25 @@
             background: #dbeafe;
             color: #1e40af;
         }
+        
+        /* استایل‌های نمودار میله‌ای جدید */
+        .employee-chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        .employee-chart-container h4 {
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        /* لیبل‌های سفارشی روی میله‌ها */
+        .chart-label-custom {
+            font-weight: 600;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -676,6 +698,20 @@
                     <h2 class="text-lg font-bold mb-3 text-gray-800"><i class="fas fa-chart-pie mr-2 text-emerald-600"></i>Meeting Distribution</h2>
                     <div class="chart-container"><canvas id="reportChart" height="180"></canvas></div>
                 </div>
+
+                <!-- نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع -->
+                <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md employee-chart-container">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-gray-800 text-md"><i class="fas fa-users mr-2 text-blue-600"></i>📊 تعداد جلسات کارمندان (تفکیک نوع)</h3>
+                        <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">نمودار میله‌ای</span>
+                    </div>
+                    <div class="chart-container-large" style="max-height: 320px;">
+                        <canvas id="employeeChart"></canvas>
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500 flex flex-wrap gap-4 justify-center" id="employeeChartLegend">
+                        <!-- Legend dynamically generated -->
+                    </div>
+                </div>
                 
                 <div class="bg-white/95 rounded-xl border border-emerald-200 p-4 shadow-md">
                     <h3 class="font-bold mb-2 text-gray-800 text-md"><i class="fas fa-download mr-2 text-emerald-600"></i> Export Reports</h3>
@@ -780,7 +816,7 @@ const SUPABASE_URL = "https://buowqguzsrychwoxyqby.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1b3dxZ3V6c3J5Y2h3b3h5cWJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3MTQ1MzIsImV4cCI6MjA3ODI5MDUzMn0._2j0iRUY4L8x_59tDMEBh8qjSTHZdUOPd0nFqPZkXAk";
 
 let users = [], meetings = [], tasks = [];
-let chart1 = null, chart2 = null;
+let chart1 = null, chart2 = null, chart3 = null;
 let currentEditUserId = null;
 let currentEditMeetingId = null;
 let momFilteredMeetings = [];
@@ -958,57 +994,44 @@ async function deleteFromSupabase(tableName, id) {
     }
 }
 
-// ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 ==========
-// ========== 📧 ارسال ایمیل از Outlook با تمپلیت 3 (بدون باز شدن تب جدید) ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت یکسان ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت ساده ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت جدید ==========
-// ========== 📧 ارسال ایمیل از Outlook با فرمت جدید (اطلاعات از دیتابیس) ==========
+// ========== 📧 ارسال ایمیل از Outlook ==========
 function sendEmailViaOutlook(meetingId) {
-    // 1️⃣ گرفتن اطلاعات جلسه از دیتابیس
     const meeting = meetings.find(m => m.id === meetingId);
     if (!meeting) {
         showToast("جلسه یافت نشد!", "error");
         return;
     }
     
-    // 2️⃣ گرفتن اطلاعات کاربر از دیتابیس
     const user = users.find(u => u.id === meeting.userId);
     if (!user) {
         showToast("کاربر یافت نشد!", "error");
         return;
     }
     
-    // 3️⃣ بررسی وجود ایمیل کاربر
     if (!user.email || user.email === '') {
         showToast("کاربر ایمیل ندارد! لطفاً ابتدا ایمیل کاربر را ثبت کنید.", "error");
         return;
     }
     
-    // 4️⃣ بررسی وجود MOM
     if (!meeting.mom || meeting.mom.trim() === '' || meeting.mom === 'No MOM') {
         showToast("ابتدا MOM را ثبت کنید!", "error");
         return;
     }
     
-    // ========== ساخت متن ایمیل با اطلاعات دیتابیس ==========
     const momText = meeting.mom.trim();
     const separator = '|══════════════════════════════════|';
     
-    // دریافت اطلاعات از دیتابیس
-    const meetingType = meeting.type;           // نوع جلسه
-    const meetingDate = meeting.date;           // تاریخ جلسه
-    const meetingTime = meeting.time;           // ساعت جلسه
-    const meetingDuration = meeting.duration;   // مدت زمان جلسه
-    const userName = user.username;             // نام شرکت‌کننده
-    const userEmail = user.email;              // ایمیل شرکت‌کننده (اختیاری)
+    const meetingType = meeting.type;
+    const meetingDate = meeting.date;
+    const meetingTime = meeting.time;
+    const meetingDuration = meeting.duration;
+    const userName = user.username;
+    const userEmail = user.email;
     
-   
-// برای کنترل کامل جهت متن
-const LRE = '\u202A'; // Left-to-Right Embedding
-const PDF = '\u202C'; // Pop Directional Formatting
+    const LRE = '\u202A';
+    const PDF = '\u202C';
 
-const emailBody = `با سلام،
+    const emailBody = `با سلام،
 
 صورتجلسه Meeting(${meetingType}) مورخ ${meetingDate} ساعت ${meetingTime} به شرح زیر می‌باشد:
 
@@ -1026,12 +1049,9 @@ ${separator}
 با احترام
 سیستم مدیریت جلسات`;
     
-    // ساخت موضوع با اطلاعات دیتابیس
     const subject = `صورتجلسه جلسه ${meetingType} - ${meetingDate}`;
     
-    // ========== ارسال ایمیل ==========
     try {
-        // روش اول: استفاده از ActiveX (IE و Edge Legacy)
         if (window.ActiveXObject) {
             try {
                 var outlookApp = new ActiveXObject("Outlook.Application");
@@ -1041,7 +1061,6 @@ ${separator}
                 mailItem.Body = emailBody;
                 mailItem.Display();
                 
-                // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
                 updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
                     const localMeeting = meetings.find(m => m.id === meetingId);
                     if (localMeeting) {
@@ -1057,7 +1076,6 @@ ${separator}
             }
         }
         
-        // روش دوم: استفاده از mailto با iframe
         const mailtoLink = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
         
         const iframe = document.createElement('iframe');
@@ -1071,7 +1089,6 @@ ${separator}
             }
         }, 3000);
         
-        // به‌روزرسانی وضعیت ارسال ایمیل در دیتابیس
         updateMeetingInSupabase(meetingId, { email_sent: true }).then(() => {
             const localMeeting = meetings.find(m => m.id === meetingId);
             if (localMeeting) {
@@ -1086,7 +1103,9 @@ ${separator}
         console.error('Error sending email:', error);
         showToast('❌ خطا در ارسال ایمیل: ' + error.message, "error");
     }
-}// ========== بارگذاری از Supabase ==========
+}
+
+// ========== بارگذاری از Supabase ==========
 async function loadUsers() {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&order=id.desc`, {
@@ -1223,6 +1242,7 @@ function switchTab(tabId) {
     
     if (tabId === 'dashboard' || tabId === 'reports') {
         updateDashboardAndCharts();
+        updateEmployeeChart();
     }
     if (tabId === 'meetings') {
         renderUsersCards();
@@ -1247,6 +1267,7 @@ function renderAll() {
     renderMomMeetings();
     updateDashboardAndCharts(); 
     updateUserCounts();
+    updateEmployeeChart();
 }
 
 function renderUsersList() {
@@ -2140,6 +2161,150 @@ function updateDashboardAndCharts() {
     
     let recentHtml = meetings.slice(0,5).map(m => `<div class="border-b pb-1 flex gap-1 text-[11px]"><i class="fas fa-circle text-[6px] text-emerald-400 mt-1"></i><span>${m.date} ${m.time} - ${m.userName}: ${m.type}</span></div>`).join('');
     document.getElementById("recentLogs") && (document.getElementById("recentLogs").innerHTML = recentHtml || "<div class='text-gray-400 text-xs'>No recent meetings</div>");
+}
+
+// ========== نمودار جدید: تعداد جلسات کارمندان با تفکیک نوع ==========
+function updateEmployeeChart() {
+    const ctx = document.getElementById('employeeChart')?.getContext('2d');
+    if (!ctx) return;
+    
+    // ایجاد داده‌ها: هر کاربر به عنوان یک مجموعه داده مجزا
+    const meetingTypes = [...new Set(meetings.map(m => m.type))];
+    const colors = ['#10b981', '#34d399', '#6ee7b7', '#059669', '#3b82f6', '#60a5fa', '#93c5fd', '#8b5cf6', '#a78bfa', '#c4b5fd'];
+    
+    // گروه‌بندی جلسات بر اساس کاربر و نوع
+    const userMeetingData = {};
+    users.forEach(user => {
+        userMeetingData[user.id] = {
+            username: user.username,
+            types: {}
+        };
+        meetingTypes.forEach(type => {
+            userMeetingData[user.id].types[type] = 0;
+        });
+    });
+    
+    meetings.forEach(meeting => {
+        if (userMeetingData[meeting.userId]) {
+            if (userMeetingData[meeting.userId].types[meeting.type] !== undefined) {
+                userMeetingData[meeting.userId].types[meeting.type]++;
+            }
+        }
+    });
+    
+    // کاربران دارای جلسه را فیلتر کنید
+    const activeUsers = Object.keys(userMeetingData).filter(userId => {
+        return Object.values(userMeetingData[userId].types).some(count => count > 0);
+    });
+    
+    if (activeUsers.length === 0) {
+        // اگر هیچ جلسه‌ای وجود ندارد، پیام نمایش دهید
+        if (chart3) { chart3.destroy(); chart3 = null; }
+        document.getElementById('employeeChartLegend').innerHTML = '<span class="text-gray-400 text-xs">هیچ جلسه‌ای برای نمایش وجود ندارد</span>';
+        return;
+    }
+    
+    // ساخت دیتاست‌ها برای هر نوع جلسه (هر نوع یک رنگ)
+    const datasets = meetingTypes.map((type, index) => {
+        const data = activeUsers.map(userId => userMeetingData[userId].types[type] || 0);
+        return {
+            label: type,
+            data: data,
+            backgroundColor: colors[index % colors.length],
+            borderColor: colors[index % colors.length],
+            borderWidth: 1,
+            borderRadius: 4,
+            barPercentage: 0.8,
+            categoryPercentage: 0.7
+        };
+    });
+    
+    const labels = activeUsers.map(userId => userMeetingData[userId].username);
+    
+    if (chart3) { chart3.destroy(); chart3 = null; }
+    
+    // ایجاد نمودار میله‌ای گروهی
+    chart3 = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        font: { size: 11, family: 'Poppins' },
+                        boxWidth: 14,
+                        padding: 12,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            let value = context.raw || 0;
+                            return label + ': ' + value + ' جلسه';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11, family: 'Poppins' } }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { 
+                        stepSize: 1,
+                        font: { size: 10, family: 'Poppins' }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        },
+        plugins: [{
+            id: 'customLabels',
+            afterDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const value = dataset.data[index];
+                        if (value > 0) {
+                            ctx.save();
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            ctx.font = 'bold 11px Poppins';
+                            ctx.fillStyle = '#1e293b';
+                            ctx.fillText(value, bar.x, bar.y - 4);
+                            ctx.restore();
+                        }
+                    });
+                });
+            }
+        }]
+    });
+    
+    // ساخت Legend سفارشی برای نمایش تعداد کل جلسات هر کاربر
+    let legendHtml = '';
+    activeUsers.forEach(userId => {
+        const user = users.find(u => u.id == userId);
+        if (user) {
+            const total = Object.values(userMeetingData[userId].types).reduce((a, b) => a + b, 0);
+            legendHtml += `<span class="inline-flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full text-xs">
+                <span class="w-2 h-2 rounded-full" style="background:${colors[activeUsers.indexOf(userId) % colors.length]}"></span>
+                ${escapeHtml(user.username)}: ${total} جلسه
+            </span>`;
+        }
+    });
+    document.getElementById('employeeChartLegend').innerHTML = legendHtml;
 }
 
 function toggleTaskReminderFields() {

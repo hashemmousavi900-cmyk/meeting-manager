@@ -2220,7 +2220,7 @@ function updateDashboardAndCharts() {
     meetings.forEach(m => typeCount[m.type] = (typeCount[m.type] || 0) + 1);
     let labels = Object.keys(typeCount);
     let data = Object.values(typeCount);
-    let colors = ["#16E5FB", "#1578E1", "#44ac33", "#f24611", "#0284c7", "#38bdf8", "#7dd3fc", "#0ea5e9"];
+    let colors = ["#16E5FB", "#1578E1", "#44ac33", "#f24611", "#0284c7", "#268d15", "#F2BD1F", "#A29BFE"];
     
     let ctx1 = document.getElementById("typeChart")?.getContext("2d");
     let ctx2 = document.getElementById("reportChart")?.getContext("2d");

@@ -913,7 +913,11 @@ const apiHeaders = {
 async function saveToSupabase(tableName, data) {
     try {
         if (!data.id) {
-            data.id = Date.now() + Math.random() * 1000;
+            // استفاده از Date.now() به جای Math.random() برای عدد صحیح
+            data.id = Date.now() + Math.floor(Math.random() * 1000);
+        } else {
+            // اگر id وجود داره ولی اعشاری هست، گرد کنید
+            data.id = Math.floor(data.id);
         }
         
         if (tableName === 'users') {
@@ -952,7 +956,6 @@ async function saveToSupabase(tableName, data) {
         return false;
     }
 }
-
 async function updateMeetingInSupabase(id, data) {
     try {
         console.log(`📤 Updating meeting ${id}:`, data);
@@ -1573,7 +1576,11 @@ async function saveNewUser() {
     if(users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast("Username exists!", "error"); return; }
     if(users.length >= 100) { showToast("Max 100 users", "error"); return; }
     
-    let newUser = { id: Date.now(), username: username, email: "" };
+    let newUser = { 
+        id: Date.now() + Math.floor(Math.random() * 1000), 
+        username: username, 
+        email: "" 
+    };
     
     const success = await saveToSupabase('users', newUser);
     if (success) {
@@ -1619,7 +1626,7 @@ async function addMeeting() {
     if(!user) return;
     
     let newMeeting = { 
-        id: Date.now(),
+        id: Date.now() + Math.floor(Math.random() * 1000),
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -1642,7 +1649,6 @@ async function addMeeting() {
         showToast(`Meeting scheduled for ${user.username}`);
     }
 }
-
 async function addTaskOrReminder() {
     let type = document.getElementById("itemType").value;
     let title = document.getElementById("itemTitle").value.trim();
@@ -1653,10 +1659,26 @@ async function addTaskOrReminder() {
     let newItem;
     if(type === "task") {
         let priority = document.getElementById("taskPriority").value;
-        newItem = { id: Date.now(), type: "task", title: title, date: date, time: time, priority: priority, completed: false };
+        newItem = { 
+            id: Date.now() + Math.floor(Math.random() * 1000), 
+            type: "task", 
+            title: title, 
+            date: date, 
+            time: time, 
+            priority: priority, 
+            completed: false 
+        };
     } else {
         let description = document.getElementById("reminderDesc").value.trim() || "No description";
-        newItem = { id: Date.now(), type: "reminder", title: title, date: date, time: time, description: description, completed: false };
+        newItem = { 
+            id: Date.now() + Math.floor(Math.random() * 1000), 
+            type: "reminder", 
+            title: title, 
+            date: date, 
+            time: time, 
+            description: description, 
+            completed: false 
+        };
     }
     
     const success = await saveToSupabase('tasks', newItem);
@@ -1745,7 +1767,7 @@ async function saveScheduledMeeting(userId) {
     if(!user) return;
     
     let newMeeting = { 
-        id: Date.now(),
+        id: Date.now() + Math.floor(Math.random() * 1000),
         user_id: parseInt(userId), 
         user_name: user.username, 
         date: date, 
@@ -2110,7 +2132,8 @@ async function saveGroupMeeting() {
         let user = users.find(u => u.id === userId);
         if(user) {
             let newMeeting = { 
-                id: Date.now() + Math.random(),
+                // استفاده از عدد صحیح بدون اعشار
+                id: Date.now() + Math.floor(Math.random() * 1000) + addedCount,
                 user_id: userId, 
                 user_name: user.username, 
                 date: date, 
@@ -2135,7 +2158,6 @@ async function saveGroupMeeting() {
         showToast(`${type} meeting scheduled for ${addedCount} people`);
     }
 }
-
 function closeGroupMeetingModal() { document.getElementById("groupMeetingModal").style.display = "none"; }
 function closeGroupMeetingModalOnOutside(event) { if(event.target === document.getElementById("groupMeetingModal")) closeGroupMeetingModal(); }
 

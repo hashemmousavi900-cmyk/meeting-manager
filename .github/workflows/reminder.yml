@@ -2,7 +2,7 @@ name: Daily Task Reminder (Bale Messenger)
 
 on:
   schedule:
-    - cron: '0 4 * * *'      # 4 صبح هر روز
+    - cron: '0 4 * * *'      # 4 صبح هر روز (به وقت UTC)
     - cron: '*/30 * * * *'   # هر 30 دقیقه
   workflow_dispatch:
 
@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'  # ✅ تغییر به Node.js 24
+          node-version: '20'  # نسخه پایدار LTS
 
       - name: Run Script
         env:
@@ -34,9 +34,6 @@ jobs:
               'Content-Type': 'application/json'
           };
           
-          // ========================
-          // ارسال پیام به بله
-          // ========================
           async function sendBaleMessage(message) {
               const baleUrl = `https://tapi.bale.ai/bot${BALE_TOKEN}/sendMessage`;
               const response = await fetch(baleUrl, {
@@ -55,9 +52,6 @@ jobs:
               return true;
           }
           
-          // ========================
-          // ذخیره وضعیت ارسال در Supabase
-          // ========================
           async function saveSentNotification(taskId, type) {
               try {
                   const url = `${SUPABASE_URL}/rest/v1/notifications`;
@@ -76,9 +70,6 @@ jobs:
               }
           }
           
-          // ========================
-          // بررسی اینکه قبلاً ارسال شده یا نه
-          // ========================
           async function checkIfAlreadySent(taskId, type) {
               try {
                   const url = `${SUPABASE_URL}/rest/v1/notifications?task_id=eq.${taskId}&type=eq.${type}&select=id`;
@@ -94,27 +85,25 @@ jobs:
               }
           }
           
-          // ========================
-          // تابع اصلی
-          // ========================
           async function run() {
+              // ⭐️ رفع مشکل زمان‌بندی: تبدیل زمان سرور گیت‌هاب به وقت ایران (UTC+3:30)
               const now = new Date();
-              const todayStr = now.toISOString().slice(0, 10);
-              const currentHour = now.getHours();
-              const currentMinute = now.getMinutes();
+              const tehranOffset = 3.5 * 60 * 60 * 1000; // 3.5 ساعت به میلی‌ثانیه
+              const tehranTime = new Date(now.getTime() + tehranOffset);
+              
+              const todayStr = tehranTime.toISOString().slice(0, 10);
+              const currentHour = tehranTime.getUTCHours();
+              const currentMinute = tehranTime.getUTCMinutes();
               const currentTimeInMinutes = currentHour * 60 + currentMinute;
               
-              console.log(`🕐 Running at ${now.toISOString()}`);
+              console.log(`🕐 Running at Iran Time: ${tehranTime.toISOString()}`);
               console.log(`📅 Today: ${todayStr}`);
               
-              // ========================
-              // 1️⃣ یادآوری روز قبل (فقط 4 صبح)
-              // ========================
-              if (currentHour === 4 && currentMinute < 10) {
-                  console.log("📤 Sending tomorrow reminder...");
+              // 1️⃣ یادآوری روز قبل (فقط در ساعت 7:30 صبح به وقت ایران که 4:00 UTC است)
+              if (currentHour === 4 && currentMinute < 30) {
+                  console.log("📤 Checking tomorrow reminder...");
                   
-                  const tomorrow = new Date(now);
-                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const tomorrow = new Date(tehranTime.getTime() + (24 * 60 * 60 * 1000));
                   const tomorrowStr = tomorrow.toISOString().slice(0, 10);
                   
                   const url = `${SUPABASE_URL}/rest/v1/tasks?date=eq.${tomorrowStr}&completed=eq.false`;
@@ -125,10 +114,18 @@ jobs:
                   const tasks = await response.json();
                   
                   if (tasks && tasks.length > 0) {
-                      const alreadySent = await checkIfAlreadySent(tomorrowStr, 'daily');
-                      if (!alreadySent) {
+                      let tasksToNotify = [];
+                      for (const task of tasks) {
+                          // بررسی اینکه برای این تسک خاص، یادآوری daily ارسال نشده باشد
+                          const alreadySent = await checkIfAlreadySent(task.id, 'daily');
+                          if (!alreadySent) {
+                              tasksToNotify.push(task);
+                          }
+                      }
+
+                      if (tasksToNotify.length > 0) {
                           let message = "🔔 *یادآوری تسک‌ها و ریمایندرهای فردا*\n\n";
-                          tasks.forEach(task => {
+                          tasksToNotify.forEach(task => {
                               const icon = task.type === "task" ? "✅" : "⏰";
                               message += `${icon} *${task.title}* (ساعت: ${task.time})\n`;
                               if (task.description && task.description !== "No description") {
@@ -139,7 +136,11 @@ jobs:
                           
                           await sendBaleMessage(message);
                           console.log("✅ Tomorrow reminder sent!");
-                          await saveSentNotification(tomorrowStr, 'daily');
+                          
+                          // ذخیره برای هر تسک به صورت جداگانه
+                          for (const task of tasksToNotify) {
+                              await saveSentNotification(task.id, 'daily');
+                          }
                       } else {
                           console.log("⏭️ Tomorrow reminder already sent today.");
                       }
@@ -148,9 +149,7 @@ jobs:
                   }
               }
               
-              // ========================
               // 2️⃣ یادآوری 2 ساعت قبل
-              // ========================
               console.log("⏰ Checking for 2-hour reminders...");
               
               const url = `${SUPABASE_URL}/rest/v1/tasks?date=eq.${todayStr}&completed=eq.false`;
@@ -173,7 +172,8 @@ jobs:
                   const taskTimeInMinutes = hour * 60 + minute;
                   const diffInMinutes = taskTimeInMinutes - currentTimeInMinutes;
                   
-                  if (diffInMinutes >= 115 && diffInMinutes <= 125) {
+                  // ⭐️ پنجره را به 30 دقیقه (115 تا 145) گسترش دادیم تا با کرون 30 دقیقه‌ای هماهنگ شود
+                  if (diffInMinutes >= 115 && diffInMinutes <= 145) {
                       const alreadySent = await checkIfAlreadySent(task.id, 'two_hour');
                       if (!alreadySent) {
                           tasksToNotify.push(task);

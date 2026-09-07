@@ -2,8 +2,8 @@ name: Daily Task Reminder (Bale Messenger)
 
 on:
   schedule:
-    - cron: '0 4 * * *'      # 4 صبح هر روز
-    - cron: '*/30 * * * *'   # هر 30 دقیقه
+    - cron: '0 4 * * *'      # 4 صبح هر روز (یادآوری روز قبل)
+    - cron: '*/30 * * * *'   # هر 30 دقیقه (برای یادآوری 2 ساعت قبل)
   workflow_dispatch:
 
 jobs:
@@ -34,6 +34,9 @@ jobs:
               'Content-Type': 'application/json'
           };
           
+          // ========================
+          // ارسال پیام به بله
+          // ========================
           async function sendBaleMessage(message) {
               const baleUrl = `https://tapi.bale.ai/bot${BALE_TOKEN}/sendMessage`;
               const response = await fetch(baleUrl, {
@@ -52,46 +55,72 @@ jobs:
               return true;
           }
           
+          // ========================
+          // ذخیره وضعیت ارسال در Supabase
+          // ========================
           async function saveSentNotification(taskId, type) {
-              const url = `${SUPABASE_URL}/rest/v1/notifications`;
-              const data = {
-                  task_id: taskId,
-                  type: type, // 'daily' یا 'two_hour'
-                  sent_at: new Date().toISOString()
-              };
-              await fetch(url, {
-                  method: 'POST',
-                  headers: headers,
-                  body: JSON.stringify(data)
-              });
+              try {
+                  const url = `${SUPABASE_URL}/rest/v1/notifications`;
+                  const data = {
+                      task_id: taskId,
+                      type: type, // 'daily' یا 'two_hour'
+                      sent_at: new Date().toISOString()
+                  };
+                  const response = await fetch(url, {
+                      method: 'POST',
+                      headers: headers,
+                      body: JSON.stringify(data)
+                  });
+                  if (!response.ok) {
+                      console.error('Failed to save notification:', await response.text());
+                  }
+              } catch(e) {
+                  console.error('Error saving notification:', e);
+              }
           }
           
+          // ========================
+          // بررسی اینکه قبلاً ارسال شده یا نه
+          // ========================
           async function checkIfAlreadySent(taskId, type) {
-              const url = `${SUPABASE_URL}/rest/v1/notifications?task_id=eq.${taskId}&type=eq.${type}&select=*`;
-              const response = await fetch(url, {
-                  method: 'GET',
-                  headers: headers
-              });
-              const data = await response.json();
-              return data && data.length > 0;
+              try {
+                  const url = `${SUPABASE_URL}/rest/v1/notifications?task_id=eq.${taskId}&type=eq.${type}&select=id`;
+                  const response = await fetch(url, {
+                      method: 'GET',
+                      headers: headers
+                  });
+                  const data = await response.json();
+                  return data && data.length > 0;
+              } catch(e) {
+                  console.error('Error checking notification:', e);
+                  return false;
+              }
           }
           
+          // ========================
+          // تابع اصلی
+          // ========================
           async function run() {
               const now = new Date();
               const todayStr = now.toISOString().slice(0, 10);
+              const currentHour = now.getHours();
+              const currentMinute = now.getMinutes();
+              const currentTimeInMinutes = currentHour * 60 + currentMinute;
+              
+              console.log(`🕐 Running at ${now.toISOString()}`);
+              console.log(`📅 Today: ${todayStr}`);
               
               // ========================
               // 1️⃣ یادآوری روز قبل (فقط 4 صبح)
               // ========================
-              const currentHour = now.getHours();
-              const currentMinute = now.getMinutes();
-              
-              // فقط اگر بین 3:50 تا 4:10 صبح باشد
               if (currentHour === 4 && currentMinute < 10) {
+                  console.log("📤 Sending tomorrow reminder...");
+                  
                   const tomorrow = new Date(now);
                   tomorrow.setDate(tomorrow.getDate() + 1);
                   const tomorrowStr = tomorrow.toISOString().slice(0, 10);
                   
+                  // دریافت تسک‌های فردا
                   const url = `${SUPABASE_URL}/rest/v1/tasks?date=eq.${tomorrowStr}&completed=eq.false`;
                   const response = await fetch(url, {
                       method: 'GET',
@@ -106,27 +135,33 @@ jobs:
                           let message = "🔔 *یادآوری تسک‌ها و ریمایندرهای فردا*\n\n";
                           tasks.forEach(task => {
                               const icon = task.type === "task" ? "✅" : "⏰";
-                              message += `${icon} *${task.title}* (ساعت: ${task.time})\n`;
+                              const priority = task.priority ? ` (${task.priority})` : '';
+                              message += `${icon} *${task.title}*${priority} (ساعت: ${task.time})\n`;
                               if (task.description && task.description !== "No description") {
                                   message += `   📝 ${task.description}\n`;
                               }
                           });
-                          message += "\nسیستم مدیریت جلسات";
+                          message += "\n📌 سیستم مدیریت جلسات";
                           
                           await sendBaleMessage(message);
                           console.log("✅ Tomorrow reminder sent!");
                           
-                          // ثبت در دیتابیس
+                          // ثبت در دیتابیس با استفاده از تاریخ به عنوان شناسه
                           await saveSentNotification(tomorrowStr, 'daily');
+                      } else {
+                          console.log("⏭️ Tomorrow reminder already sent today.");
                       }
+                  } else {
+                      console.log("📭 No tasks for tomorrow.");
                   }
               }
               
               // ========================
               // 2️⃣ یادآوری 2 ساعت قبل
               // ========================
-              const currentTimeInMinutes = currentHour * 60 + currentMinute;
+              console.log("⏰ Checking for 2-hour reminders...");
               
+              // دریافت تسک‌های امروز
               const url = `${SUPABASE_URL}/rest/v1/tasks?date=eq.${todayStr}&completed=eq.false`;
               const response = await fetch(url, {
                   method: 'GET',
@@ -135,7 +170,7 @@ jobs:
               const tasks = await response.json();
               
               if (!tasks || tasks.length === 0) {
-                  console.log("No tasks for today.");
+                  console.log("📭 No tasks for today.");
                   return;
               }
               
@@ -162,14 +197,15 @@ jobs:
                   let message = "⏰ *یادآوری ۲ ساعت قبل از تسک‌ها*\n\n";
                   tasksToNotify.forEach(task => {
                       const icon = task.type === "task" ? "✅" : "⏰";
-                      message += `${icon} *${task.title}*\n`;
+                      const priority = task.priority ? ` (${task.priority})` : '';
+                      message += `${icon} *${task.title}*${priority}\n`;
                       message += `   🕐 زمان: ${task.time}\n`;
                       if (task.description && task.description !== "No description") {
                           message += `   📝 ${task.description}\n`;
                       }
                       message += `   ⏳ ۲ ساعت تا شروع\n\n`;
                   });
-                  message += "\nسیستم مدیریت جلسات";
+                  message += "📌 سیستم مدیریت جلسات";
                   
                   await sendBaleMessage(message);
                   
@@ -180,198 +216,16 @@ jobs:
                   
                   console.log(`✅ 2-hour reminder sent for ${tasksToNotify.length} tasks!`);
               } else {
-                  console.log("No tasks need 2-hour reminder now.");
+                  console.log("📭 No tasks need 2-hour reminder now.");
               }
+              
+              console.log("✅ Job completed successfully!");
           }
           
-          run().catch(e => { console.error(e); process.exit(1); });
-          EOF
-          node check-tasks.jsname: Daily Task Reminder (Bale Messenger)
-
-on:
-  schedule:
-    - cron: '0 4 * * *'      # 4 صبح هر روز
-    - cron: '*/30 * * * *'   # هر 30 دقیقه
-  workflow_dispatch:
-
-jobs:
-  send-bale-message:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Run Script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          BALE_TOKEN: ${{ secrets.BALE_TOKEN }}
-          BALE_CHAT_ID: ${{ secrets.BALE_CHAT_ID }}
-        run: |
-          cat << 'EOF' > check-tasks.js
-          const SUPABASE_URL = process.env.SUPABASE_URL;
-          const SUPABASE_KEY = process.env.SUPABASE_KEY;
-          const BALE_TOKEN = process.env.BALE_TOKEN;
-          const BALE_CHAT_ID = process.env.BALE_CHAT_ID;
-          
-          const headers = {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json'
-          };
-          
-          async function sendBaleMessage(message) {
-              const baleUrl = `https://tapi.bale.ai/bot${BALE_TOKEN}/sendMessage`;
-              const response = await fetch(baleUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      chat_id: BALE_CHAT_ID,
-                      text: message,
-                      parse_mode: "Markdown"
-                  })
-              });
-              if (!response.ok) {
-                  const error = await response.text();
-                  throw new Error("Bale API error: " + error);
-              }
-              return true;
-          }
-          
-          async function saveSentNotification(taskId, type) {
-              const url = `${SUPABASE_URL}/rest/v1/notifications`;
-              const data = {
-                  task_id: taskId,
-                  type: type, // 'daily' یا 'two_hour'
-                  sent_at: new Date().toISOString()
-              };
-              await fetch(url, {
-                  method: 'POST',
-                  headers: headers,
-                  body: JSON.stringify(data)
-              });
-          }
-          
-          async function checkIfAlreadySent(taskId, type) {
-              const url = `${SUPABASE_URL}/rest/v1/notifications?task_id=eq.${taskId}&type=eq.${type}&select=*`;
-              const response = await fetch(url, {
-                  method: 'GET',
-                  headers: headers
-              });
-              const data = await response.json();
-              return data && data.length > 0;
-          }
-          
-          async function run() {
-              const now = new Date();
-              const todayStr = now.toISOString().slice(0, 10);
-              
-              // ========================
-              // 1️⃣ یادآوری روز قبل (فقط 4 صبح)
-              // ========================
-              const currentHour = now.getHours();
-              const currentMinute = now.getMinutes();
-              
-              // فقط اگر بین 3:50 تا 4:10 صبح باشد
-              if (currentHour === 4 && currentMinute < 10) {
-                  const tomorrow = new Date(now);
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-                  
-                  const url = `${SUPABASE_URL}/rest/v1/tasks?date=eq.${tomorrowStr}&completed=eq.false`;
-                  const response = await fetch(url, {
-                      method: 'GET',
-                      headers: headers
-                  });
-                  const tasks = await response.json();
-                  
-                  if (tasks && tasks.length > 0) {
-                      // چک کن که امروز قبلاً ارسال نشده باشد
-                      const alreadySent = await checkIfAlreadySent(tomorrowStr, 'daily');
-                      if (!alreadySent) {
-                          let message = "🔔 *یادآوری تسک‌ها و ریمایندرهای فردا*\n\n";
-                          tasks.forEach(task => {
-                              const icon = task.type === "task" ? "✅" : "⏰";
-                              message += `${icon} *${task.title}* (ساعت: ${task.time})\n`;
-                              if (task.description && task.description !== "No description") {
-                                  message += `   📝 ${task.description}\n`;
-                              }
-                          });
-                          message += "\nسیستم مدیریت جلسات";
-                          
-                          await sendBaleMessage(message);
-                          console.log("✅ Tomorrow reminder sent!");
-                          
-                          // ثبت در دیتابیس
-                          await saveSentNotification(tomorrowStr, 'daily');
-                      }
-                  }
-              }
-              
-              // ========================
-              // 2️⃣ یادآوری 2 ساعت قبل
-              // ========================
-              const currentTimeInMinutes = currentHour * 60 + currentMinute;
-              
-              const url = `${SUPABASE_URL}/rest/v1/tasks?date=eq.${todayStr}&completed=eq.false`;
-              const response = await fetch(url, {
-                  method: 'GET',
-                  headers: headers
-              });
-              const tasks = await response.json();
-              
-              if (!tasks || tasks.length === 0) {
-                  console.log("No tasks for today.");
-                  return;
-              }
-              
-              // تسک‌هایی که 2 ساعت قبلشان است
-              const tasksToNotify = [];
-              for (const task of tasks) {
-                  if (!task.time) continue;
-                  
-                  const [hour, minute] = task.time.split(':').map(Number);
-                  const taskTimeInMinutes = hour * 60 + minute;
-                  const diffInMinutes = taskTimeInMinutes - currentTimeInMinutes;
-                  
-                  // دقیقاً 2 ساعت قبل (با بازه 115-125 دقیقه)
-                  if (diffInMinutes >= 115 && diffInMinutes <= 125) {
-                      // چک کن که قبلاً ارسال نشده باشد
-                      const alreadySent = await checkIfAlreadySent(task.id, 'two_hour');
-                      if (!alreadySent) {
-                          tasksToNotify.push(task);
-                      }
-                  }
-              }
-              
-              if (tasksToNotify.length > 0) {
-                  let message = "⏰ *یادآوری ۲ ساعت قبل از تسک‌ها*\n\n";
-                  tasksToNotify.forEach(task => {
-                      const icon = task.type === "task" ? "✅" : "⏰";
-                      message += `${icon} *${task.title}*\n`;
-                      message += `   🕐 زمان: ${task.time}\n`;
-                      if (task.description && task.description !== "No description") {
-                          message += `   📝 ${task.description}\n`;
-                      }
-                      message += `   ⏳ ۲ ساعت تا شروع\n\n`;
-                  });
-                  message += "\nسیستم مدیریت جلسات";
-                  
-                  await sendBaleMessage(message);
-                  
-                  // ثبت همه در دیتابیس
-                  for (const task of tasksToNotify) {
-                      await saveSentNotification(task.id, 'two_hour');
-                  }
-                  
-                  console.log(`✅ 2-hour reminder sent for ${tasksToNotify.length} tasks!`);
-              } else {
-                  console.log("No tasks need 2-hour reminder now.");
-              }
-          }
-          
-          run().catch(e => { console.error(e); process.exit(1); });
+          // اجرا
+          run().catch(e => { 
+              console.error('❌ Error:', e); 
+              process.exit(1); 
+          });
           EOF
           node check-tasks.js

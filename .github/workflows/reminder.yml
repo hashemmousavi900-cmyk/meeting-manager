@@ -2,8 +2,8 @@ name: Daily Task Reminder (Bale Messenger)
 
 on:
   schedule:
-    - cron: '0 4 * * *'      # 4 صبح هر روز (یادآوری روز قبل)
-    - cron: '*/30 * * * *'   # هر 30 دقیقه (برای یادآوری 2 ساعت قبل)
+    - cron: '0 4 * * *'      # 4 صبح هر روز
+    - cron: '*/30 * * * *'   # هر 30 دقیقه
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'  # ✅ تغییر به Node.js 24
 
       - name: Run Script
         env:
